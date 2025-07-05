@@ -60,11 +60,6 @@ class Product extends Model
                         'optional' => true,
                     ],
                     [
-                        'name' => 'barcode',
-                        'type' => 'string',
-                        'optional' => true,
-                    ],
-                    [
                         'name' => 'created_at',
                         'type' => 'int64',
                     ],
@@ -74,7 +69,12 @@ class Product extends Model
                         'optional' => true,
                     ],
                     [
-                        'name' => 'short_description_.*',
+                        'name' => 'sef_key_.*',
+                        'type' => 'string',
+                        'optional' => true,
+                    ],
+                    [
+                        'name' => 'short_desc_.*',
                         'type' => 'string',
                         'optional' => true,
                     ],
@@ -92,11 +92,11 @@ class Product extends Model
             ],
             'search-parameters' => [
                 'query_by' => implode(', ', [
-                    'code',
-                    'barcode',
                     'name_*',
-                    'short_description_*',
+                    'sef_key_*',
+                    'short_desc_*',
                     'description_*',
+                    'code',
                 ]),
             ],
         ];
