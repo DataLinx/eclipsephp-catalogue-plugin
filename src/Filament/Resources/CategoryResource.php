@@ -5,6 +5,7 @@ namespace Eclipse\Catalogue\Filament\Resources;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Eclipse\Catalogue\Filament\Resources\CategoryResource\Pages;
 use Eclipse\Catalogue\Models\Category;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Placeholder;
@@ -249,6 +250,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
         return [
             'index' => Pages\ListCategories::route('/'),
             'create' => Pages\CreateCategory::route('/create'),
+            'sorting' => Pages\SortingCategory::route('/sorting'),
             'edit' => Pages\EditCategory::route('/{record}/edit'),
         ];
     }
@@ -256,6 +258,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            ->where('site_id', Filament::getTenant()->id)
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);

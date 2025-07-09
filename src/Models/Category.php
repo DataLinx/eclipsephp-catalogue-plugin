@@ -9,13 +9,13 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use SolutionForest\FilamentTree\Concern\ModelTree;
 use Spatie\Translatable\HasTranslations;
 
 class Category extends Model
 {
-    use HasFactory, HasTranslations, IsSearchable, SoftDeletes;
+    use HasFactory, HasTranslations, IsSearchable, ModelTree, SoftDeletes;
 
     protected $table = 'catalogue_categories';
 
@@ -37,7 +37,13 @@ class Category extends Model
         'sef_key',
         'short_desc',
         'description',
+        'site_id',
     ];
+
+    public function determineOrderColumnName(): string
+    {
+        return 'sort';
+    }
 
     public function site(): BelongsTo
     {
@@ -49,23 +55,23 @@ class Category extends Model
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
-    public function children(): HasMany
+    public static function getHierarchicalOptions($parentId = -1, $depth = 0): array
     {
-        return $this->hasMany(Category::class, 'parent_id');
-    }
-
-    public static function getHierarchicalOptions($parentId = null, $depth = 0): array
-    {
-        $categories = static::where('parent_id', $parentId)
+        $categories = static::where('site_id', Filament::getTenant()?->id)
+            ->where('parent_id', $parentId)
             ->orderBy('sort')
-            ->orderBy('name')
             ->get();
 
         $options = [];
 
         foreach ($categories as $category) {
             $indent = str_repeat('─', $depth);
-            $name = ($indent ? $indent.' ' : '').$category->name;
+
+            $categoryName = $category->getTranslation('name', app()->getLocale())
+                ?? $category->getTranslations('name')[array_key_first($category->getTranslations('name'))]
+                ?? 'Unnamed Category';
+
+            $name = ($indent ? $indent.' ' : '').$categoryName;
             $options[$category->id] = $name;
 
             $childOptions = static::getHierarchicalOptions($category->id, $depth + 1);
