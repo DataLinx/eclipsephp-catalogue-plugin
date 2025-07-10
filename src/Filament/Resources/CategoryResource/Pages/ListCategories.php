@@ -18,7 +18,14 @@ class ListCategories extends ListRecords
     {
         return [
             Actions\LocaleSwitcher::make(),
-            Actions\CreateAction::make(),
+            Actions\Action::make('sorting')
+                ->label(__('eclipse-catalogue::categories.actions.sorting'))
+                ->icon('heroicon-o-arrows-up-down')
+                ->color('gray')
+                ->url(fn () => self::$resource::getUrl('sorting')),
+            Actions\CreateAction::make()
+                ->label(__('eclipse-catalogue::categories.actions.create'))
+                ->icon('heroicon-o-plus-circle'),
         ];
     }
 }

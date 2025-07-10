@@ -29,7 +29,7 @@ class CategoryFactory extends Factory
                 'sl' => $slovenianName,
             ],
             'parent_id' => null,
-            'image' => fake()->optional(0.3)->imageUrl(400, 300, 'business', true, 'Category'),
+            'image' => self::generateCategoryImage($englishName),
             'sort' => fake()->randomNumber(),
             'is_active' => fake()->boolean(),
             'code' => fake()->optional()->bothify('CAT-####'),
@@ -50,6 +50,22 @@ class CategoryFactory extends Factory
             'updated_at' => Carbon::now(),
             'site_id' => Site::inRandomOrder()->first()?->id ?? Site::factory()->create()->id,
         ];
+    }
+
+    private static function generateCategoryImage(string $name): ?string
+    {
+        $colors = ['3B82F6', '10B981', 'F59E0B', 'EF4444', '8B5CF6', '06B6D4', 'F97316', 'EC4899'];
+        $backgrounds = ['E0F2FE', 'ECFDF5', 'FFFBEB', 'FEF2F2', 'F3E8FF', 'ECFEFF', 'FFF7ED', 'FDF2F8'];
+
+        $color = fake()->randomElement($colors);
+        $background = fake()->randomElement($backgrounds);
+
+        return fake()->optional(0.8)->passthrough(
+            'https://ui-avatars.com/api/?name='.urlencode($name).
+            '&size=400&background='.$background.
+            '&color='.$color.
+            '&bold=true&format=png'
+        );
     }
 
     public function parent(): static

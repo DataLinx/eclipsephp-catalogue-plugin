@@ -50,51 +50,56 @@ class CategoryResource extends Resource implements HasShieldPermissions
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('eclipse-catalogue::categories.navigation_group');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('eclipse-catalogue::categories.title');
+    }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Section::make('Basic Information')
+                Section::make(__('eclipse-catalogue::categories.form.sections.basic_information'))
+                    ->columns(2)
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                TextInput::make('name')
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->placeholder('Enter category name'),
-
-                                TextInput::make('code')
-                                    ->maxLength(255)
-                                    ->placeholder('Enter category code'),
-                            ]),
-
-                        Grid::make(2)
-                            ->schema([
-                                Select::make('parent_id')
-                                    ->label('Parent Category')
-                                    ->options(Category::getHierarchicalOptions())
-                                    ->searchable()
-                                    ->placeholder('Select parent category (optional)'),
-
-                                TextInput::make('sef_key')
-                                    ->label('SEF Key')
-                                    ->maxLength(255)
-                                    ->placeholder('URL-friendly key (auto-generated if empty)')
-                                    ->helperText('Leave empty to auto-generate from category name'),
-                            ]),
+                        Select::make('parent_id')
+                            ->label(__('eclipse-catalogue::categories.form.fields.parent_id'))
+                            ->options(Category::getHierarchicalOptions())
+                            ->searchable()
+                            ->placeholder(__('eclipse-catalogue::categories.form.fields.parent_id_placeholder')),
+                        TextInput::make('name')
+                            ->label(__('eclipse-catalogue::categories.form.fields.name'))
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder(__('eclipse-catalogue::categories.form.fields.name_placeholder'))
+                            ->helperText(fn ($record) => $record?->getFullPath()),
+                        TextInput::make('code')
+                            ->label(__('eclipse-catalogue::categories.form.fields.code'))
+                            ->maxLength(255)
+                            ->placeholder(__('eclipse-catalogue::categories.form.fields.code_placeholder')),
+                        TextInput::make('sef_key')
+                            ->label(__('eclipse-catalogue::categories.form.fields.sef_key'))
+                            ->maxLength(255)
+                            ->placeholder(__('eclipse-catalogue::categories.form.fields.sef_key_placeholder'))
+                            ->helperText(__('eclipse-catalogue::categories.form.fields.sef_key_helper')),
                     ]),
 
-                Section::make('Content')
+                Section::make(__('eclipse-catalogue::categories.form.sections.content'))
                     ->compact()
                     ->schema([
                         Textarea::make('short_desc')
-                            ->label('Short Description')
+                            ->label(__('eclipse-catalogue::categories.form.fields.short_desc'))
                             ->rows(3)
-                            ->placeholder('Enter a brief description'),
+                            ->placeholder(__('eclipse-catalogue::categories.form.fields.short_desc_placeholder')),
 
                         RichEditor::make('description')
-                            ->label('Full Description')
-                            ->placeholder('Enter detailed category description')
+                            ->label(__('eclipse-catalogue::categories.form.fields.description'))
+                            ->placeholder(__('eclipse-catalogue::categories.form.fields.description_placeholder'))
                             ->toolbarButtons([
                                 'bold',
                                 'italic',
@@ -107,12 +112,12 @@ class CategoryResource extends Resource implements HasShieldPermissions
                             ]),
                     ]),
 
-                Section::make('Media & Settings')
+                Section::make(__('eclipse-catalogue::categories.form.sections.media_settings'))
                     ->compact()
                     ->schema([
                         FileUpload::make('image')
                             ->columnSpanFull()
-                            ->label('Category Image')
+                            ->label(__('eclipse-catalogue::categories.form.fields.image'))
                             ->image()
                             ->imageEditor()
                             ->directory('categories')
@@ -121,28 +126,28 @@ class CategoryResource extends Resource implements HasShieldPermissions
                         Grid::make(2)
                             ->schema([
                                 Toggle::make('is_active')
-                                    ->label('Active')
+                                    ->label(__('eclipse-catalogue::categories.form.fields.is_active'))
                                     ->default(true)
-                                    ->helperText('Whether this category is visible'),
+                                    ->helperText(__('eclipse-catalogue::categories.form.fields.is_active_helper')),
 
                                 Toggle::make('recursive_browsing')
-                                    ->label('Recursive Browsing')
+                                    ->label(__('eclipse-catalogue::categories.form.fields.recursive_browsing'))
                                     ->default(false)
-                                    ->helperText('Allow browsing subcategories recursively'),
+                                    ->helperText(__('eclipse-catalogue::categories.form.fields.recursive_browsing_helper')),
                             ]),
                     ]),
 
-                Section::make('System Information')
+                Section::make(__('eclipse-catalogue::categories.form.sections.system_information'))
                     ->compact()
                     ->schema([
                         Grid::make(2)
                             ->schema([
                                 Placeholder::make('created_at')
-                                    ->label('Created Date')
+                                    ->label(__('eclipse-catalogue::categories.form.fields.created_at'))
                                     ->content(fn (?Category $record): string => $record?->created_at?->diffForHumans() ?? 'Not yet saved'),
 
                                 Placeholder::make('updated_at')
-                                    ->label('Last Modified Date')
+                                    ->label(__('eclipse-catalogue::categories.form.fields.updated_at'))
                                     ->content(fn (?Category $record): string => $record?->updated_at?->diffForHumans() ?? 'Not yet saved'),
                             ]),
                     ])
@@ -155,19 +160,22 @@ class CategoryResource extends Resource implements HasShieldPermissions
     {
         return $table
             ->columns([
-                ImageColumn::make('image'),
+                ImageColumn::make('image')
+                    ->label(__('eclipse-catalogue::categories.table.columns.image'))
+                    ->size(40)
+                    ->circular()
+                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&color=7F9CF5&background=EBF4FF'),
 
                 TextColumn::make('name')
+                    ->label(__('eclipse-catalogue::categories.table.columns.name'))
                     ->searchable()
                     ->sortable()
-                    ->weight('bold')
-                    ->formatStateUsing(function ($record, $state): string {
-                        $level = $record->parent_id ? '└─ ' : '';
-
-                        return $level.$state;
-                    }),
+                    ->lineClamp(1)
+                    ->description(fn ($record) => $record->getFullPath())
+                    ->tooltip(fn ($record) => $record->getFullPath()),
 
                 TextColumn::make('sef_key')
+                    ->label(__('eclipse-catalogue::categories.table.columns.sef_key'))
                     ->label('SEF Key')
                     ->searchable()
                     ->fontFamily('mono')
@@ -175,73 +183,79 @@ class CategoryResource extends Resource implements HasShieldPermissions
                     ->size('sm'),
 
                 IconColumn::make('is_active')
+                    ->label(__('eclipse-catalogue::categories.table.columns.is_active'))
                     ->label('Active')
                     ->boolean()
-                    ->trueIcon('heroicon-o-check-badge')
-                    ->falseIcon('heroicon-o-x-mark')
-                    ->trueColor('success')
-                    ->falseColor('danger'),
+                    ->alignCenter(),
 
                 TextColumn::make('code')
+                    ->label(__('eclipse-catalogue::categories.table.columns.code'))
                     ->searchable()
                     ->fontFamily('mono')
-                    ->placeholder('No code'),
+                    ->placeholder('—')
+                    ->copyable(),
 
                 IconColumn::make('recursive_browsing')
-                    ->label('Recursive')
+                    ->label(__('eclipse-catalogue::categories.table.columns.recursive_browsing'))
                     ->boolean()
-                    ->tooltip('Include products from subcategories'),
+                    ->alignCenter()
+                    ->tooltip(__('eclipse-catalogue::categories.table.tooltips.recursive_browsing')),
 
                 IconColumn::make('description')
-                    ->label('Long Desc.')
+                    ->label(__('eclipse-catalogue::categories.table.columns.description'))
+                    ->alignCenter()
                     ->getStateUsing(fn ($record) => ! empty($record->description))
                     ->icon(fn ($state) => $state ? 'heroicon-o-document-text' : 'heroicon-o-document')
                     ->color(fn ($state) => $state ? 'success' : 'gray')
-                    ->tooltip(fn ($record) => ! empty($record->description) ? 'Has description' : 'No description'),
+                    ->tooltip(fn ($record) => ! empty($record->description) ? __('eclipse-catalogue::categories.table.tooltips.has_description') : __('eclipse-catalogue::categories.table.tooltips.no_description')),
 
-                TextColumn::make('short_desc'),
-
-                TextColumn::make('sort')
-                    ->label('Order')
-                    ->sortable()
-                    ->alignCenter(),
+                TextColumn::make('short_desc')
+                    ->label(__('eclipse-catalogue::categories.table.columns.short_desc'))
+                    ->lineClamp(2),
             ])
             ->searchable()
-            ->reorderable('sort')
             ->filters([
                 TrashedFilter::make(),
 
                 SelectFilter::make('parent_id')
-                    ->label('Parent Category')
-                    ->relationship('parent', 'name')
-                    ->placeholder('All Categories'),
+                    ->label(__('eclipse-catalogue::categories.filters.parent_category'))
+                    ->multiple()
+                    ->options(Category::getHierarchicalOptions())
+                    ->placeholder(__('eclipse-catalogue::categories.filters.category_placeholder')),
 
                 SelectFilter::make('is_active')
-                    ->label('Status')
+                    ->label(__('eclipse-catalogue::categories.filters.is_active'))
                     ->options([
-                        1 => 'Active',
-                        0 => 'Inactive',
+                        1 => __('eclipse-catalogue::categories.filters.active'),
+                        0 => __('eclipse-catalogue::categories.filters.inactive'),
                     ])
                     ->placeholder('All Statuses'),
 
                 Filter::make('has_description')
-                    ->label('Has Description')
+                    ->label(__('eclipse-catalogue::categories.filters.has_description'))
                     ->query(fn (Builder $query): Builder => $query->whereNotNull('description'))
                     ->toggle(),
 
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make(),
+                EditAction::make()
+                    ->label(__('eclipse-catalogue::categories.actions.create')),
+                DeleteAction::make()
+                    ->label(__('eclipse-catalogue::categories.actions.edit')),
+                RestoreAction::make()
+                    ->label(__('eclipse-catalogue::categories.actions.restore')),
+                ForceDeleteAction::make()
+                    ->label(__('eclipse-catalogue::categories.actions.force_delete')),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                ]),
+                    DeleteBulkAction::make()
+                        ->label(__('eclipse-catalogue::categories.actions.delete')),
+                    RestoreBulkAction::make()
+                        ->label(__('eclipse-catalogue::categories.actions.restore')),
+                    ForceDeleteBulkAction::make()
+                        ->label(__('eclipse-catalogue::categories.actions.force_delete')),
+                ])->label(__('eclipse-catalogue::categories.actions.bulk_actions')),
             ]);
     }
 

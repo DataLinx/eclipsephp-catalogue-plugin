@@ -30,6 +30,7 @@ class Category extends Model
         'sef_key',
         'short_desc',
         'description',
+        'site_id',
     ];
 
     public array $translatable = [
@@ -37,12 +38,16 @@ class Category extends Model
         'sef_key',
         'short_desc',
         'description',
-        'site_id',
     ];
 
     public function determineOrderColumnName(): string
     {
         return 'sort';
+    }
+
+    public function determineTitleColumnName(): string
+    {
+        return 'name';
     }
 
     public function site(): BelongsTo
@@ -55,27 +60,16 @@ class Category extends Model
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
-    public static function getHierarchicalOptions($parentId = -1, $depth = 0): array
+    public static function getHierarchicalOptions(): array
     {
-        $categories = static::where('site_id', Filament::getTenant()?->id)
-            ->where('parent_id', $parentId)
-            ->orderBy('sort')
-            ->get();
+        $options = static::selectArray(5);
 
-        $options = [];
+        unset($options[static::defaultParentKey()]);
 
-        foreach ($categories as $category) {
-            $indent = str_repeat('─', $depth);
-
-            $categoryName = $category->getTranslation('name', app()->getLocale())
-                ?? $category->getTranslations('name')[array_key_first($category->getTranslations('name'))]
-                ?? 'Unnamed Category';
-
-            $name = ($indent ? $indent.' ' : '').$categoryName;
-            $options[$category->id] = $name;
-
-            $childOptions = static::getHierarchicalOptions($category->id, $depth + 1);
-            $options = array_merge($options, $childOptions);
+        foreach ($options as $key => $value) {
+            if (str_starts_with($value, '---')) {
+                $options[$key] = substr($value, 3);
+            }
         }
 
         return $options;
@@ -91,6 +85,27 @@ class Category extends Model
             'is_active' => 'boolean',
             'recursive_browsing' => 'boolean',
         ];
+    }
+
+    public function getFullPath(): string
+    {
+        $allNodes = static::allNodes()->keyBy('id');
+
+        $path = [];
+        $current = $this;
+
+        while ($current) {
+            $path[] = $current->name;
+            $parentId = $current->{$this->determineParentColumnName()};
+
+            if ($parentId && $parentId !== static::defaultParentKey() && isset($allNodes[$parentId])) {
+                $current = $allNodes[$parentId];
+            } else {
+                $current = null;
+            }
+        }
+
+        return implode(' > ', array_reverse($path));
     }
 
     protected static function newFactory(): CategoryFactory

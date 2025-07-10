@@ -15,11 +15,19 @@ class SortingCategory extends BasePage
 
     protected static int $maxDepth = 6;
 
+    public function getTitle(): string
+    {
+        return __('eclipse-catalogue::categories.sorting');
+    }
+
     protected function getActions(): array
     {
         return [
-            $this->getCreateAction(),
             Actions\LocaleSwitcher::make(),
+            $this->getCreateAction()
+                ->translateLabel()
+                ->label(__('eclipse-catalogue::categories.actions.create'))
+                ->icon('heroicon-o-plus-circle'),
         ];
     }
 
