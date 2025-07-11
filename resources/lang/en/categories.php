@@ -35,6 +35,9 @@ return [
             'updated_at' => 'Last Modified Date',
             'not_yet_saved' => 'Not yet saved',
         ],
+        'errors' => [
+            'sef_key' => 'The SEF key has already been taken.',
+        ],
     ],
 
     'table' => [

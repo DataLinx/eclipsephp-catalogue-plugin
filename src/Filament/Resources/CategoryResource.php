@@ -16,6 +16,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Concerns\Translatable;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\BulkActionGroup;
@@ -34,7 +36,9 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
 
 class CategoryResource extends Resource implements HasShieldPermissions
 {
@@ -77,7 +81,12 @@ class CategoryResource extends Resource implements HasShieldPermissions
                             ->required()
                             ->maxLength(255)
                             ->placeholder(__('eclipse-catalogue::categories.form.fields.name_placeholder'))
-                            ->helperText(fn ($record) => $record?->getFullPath()),
+                            ->helperText(fn ($record) => $record?->getFullPath())
+                            ->live(debounce: 300)
+                            ->afterStateUpdated(function ($state, Set $set, Get $get): void {
+                                $sefKey = Str::slug($state);
+                                $set('sef_key', $sefKey);
+                            }),
                         TextInput::make('code')
                             ->label(__('eclipse-catalogue::categories.form.fields.code'))
                             ->maxLength(255)
@@ -86,7 +95,31 @@ class CategoryResource extends Resource implements HasShieldPermissions
                             ->label(__('eclipse-catalogue::categories.form.fields.sef_key'))
                             ->maxLength(255)
                             ->placeholder(__('eclipse-catalogue::categories.form.fields.sef_key_placeholder'))
-                            ->helperText(__('eclipse-catalogue::categories.form.fields.sef_key_helper')),
+                            ->helperText(__('eclipse-catalogue::categories.form.fields.sef_key_helper'))
+                            ->rules([
+                                fn (Get $get, Model $record): callable => function (string $attribute, $value, $fail) use ($record) {
+                                    if (empty($value)) {
+                                        return;
+                                    }
+
+                                    $siteId = Filament::getTenant()->id;
+                                    $currentLocale = app()->getLocale();
+
+                                    $query = Category::where('site_id', $siteId)
+                                        ->where(function ($q) use ($value, $currentLocale): void {
+                                            $q->whereJsonContains('sef_key', $value)
+                                                ->orWhereJsonContains("sef_key->{$currentLocale}", $value);
+                                        });
+
+                                    if ($record) {
+                                        $query->where('id', '!=', $record->id);
+                                    }
+
+                                    if ($query->exists()) {
+                                        $fail(__('eclipse-catalogue::categories.form.errors.sef_key'));
+                                    }
+                                },
+                            ]),
                     ]),
 
                 Section::make(__('eclipse-catalogue::categories.form.sections.content'))
