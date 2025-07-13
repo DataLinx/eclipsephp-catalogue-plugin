@@ -3,7 +3,6 @@
 namespace Eclipse\Catalogue\Factories;
 
 use Eclipse\Catalogue\Models\Category;
-use Eclipse\Core\Models\Site;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -48,7 +47,7 @@ class CategoryFactory extends Factory
             ],
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
-            'site_id' => Site::inRandomOrder()->first()?->id ?? Site::factory()->create()->id,
+            'site_id' => null,
         ];
     }
 

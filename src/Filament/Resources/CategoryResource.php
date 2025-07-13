@@ -97,7 +97,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
                             ->placeholder(__('eclipse-catalogue::categories.form.fields.sef_key_placeholder'))
                             ->helperText(__('eclipse-catalogue::categories.form.fields.sef_key_helper'))
                             ->rules([
-                                fn (Get $get, Model $record): callable => function (string $attribute, $value, $fail) use ($record) {
+                                fn (Get $get, ?Model $record): callable => function (string $attribute, $value, $fail) use ($record): void {
                                     if (empty($value)) {
                                         return;
                                     }

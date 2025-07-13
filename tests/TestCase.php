@@ -22,6 +22,8 @@ abstract class TestCase extends BaseTestCase
 
         parent::setUp();
 
+        config(['scout.driver' => null]);
+
         $this->withoutVite();
     }
 
