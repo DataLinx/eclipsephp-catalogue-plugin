@@ -3,21 +3,22 @@
 namespace Eclipse\Catalogue\Seeders;
 
 use Eclipse\Catalogue\Models\Category;
-use Eclipse\Core\Models\Site;
 use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        $sites = Site::all();
+        $tenantModel = config('eclipse-catalogue.tenancy.model');
+        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+        $tenants = $tenantModel::all();
 
-        foreach ($sites as $site) {
+        foreach ($tenants as $tenant) {
             $parents = Category::factory()
                 ->parent()
                 ->active()
                 ->count(3)
-                ->create(['site_id' => $site->id]);
+                ->create([$tenantFK => $tenant->id]);
 
             foreach ($parents as $index => $parent) {
                 $childrenCount = match ($index) {
@@ -30,7 +31,7 @@ class CategorySeeder extends Seeder
                     ->child($parent)
                     ->active()
                     ->count($childrenCount)
-                    ->create(['site_id' => $site->id]);
+                    ->create([$tenantFK => $tenant->id]);
             }
         }
     }

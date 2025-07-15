@@ -4,7 +4,6 @@ namespace Eclipse\Catalogue\Models;
 
 use Eclipse\Catalogue\Factories\CategoryFactory;
 use Eclipse\Common\Foundation\Models\IsSearchable;
-use Eclipse\Core\Models\Site;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -48,11 +47,6 @@ class Category extends Model
     public function determineTitleColumnName(): string
     {
         return 'name';
-    }
-
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
     }
 
     public function parent(): BelongsTo
