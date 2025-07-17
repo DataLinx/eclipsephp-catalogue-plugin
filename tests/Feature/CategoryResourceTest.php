@@ -36,7 +36,7 @@ it('can create category', function (): void {
     expect($createdCategory->name)->not()->toBeNull();
 });
 
-it('can edit category', function () {
+it('can edit category', function (): void {
     $category = Category::factory()->create();
 
     Livewire::test(CategoryResource\Pages\EditCategory::class, [
@@ -65,7 +65,7 @@ it('can delete category', function (): void {
     expect($category->fresh()->trashed())->toBeTrue();
 });
 
-it('validates unique sef_key within same site', function () {
+it('validates unique sef_key within same site', function (): void {
     $existingCategory = Category::factory()->create([
         'sef_key' => 'electronics',
     ]);
@@ -79,7 +79,7 @@ it('validates unique sef_key within same site', function () {
         ->assertHasFormErrors(['sef_key']);
 });
 
-it('prevents circular parent relationship', function () {
+it('prevents circular parent relationship', function (): void {
     $parent = Category::factory()->create(['name' => 'Parent']);
     $child = Category::factory()->create([
         'name' => 'Child',
