@@ -4,6 +4,7 @@ namespace Eclipse\Catalogue\Filament\Resources\CategoryResource\Pages;
 
 use Eclipse\Catalogue\Filament\Resources\CategoryResource;
 use Filament\Actions;
+use Illuminate\Database\Eloquent\Model;
 use SolutionForest\FilamentTree\Concern\TreeRecords\Translatable;
 use SolutionForest\FilamentTree\Resources\Pages\TreePage as BasePage;
 
@@ -31,7 +32,7 @@ class SortingCategory extends BasePage
         ];
     }
 
-    public function getTreeRecordTitle(?\Illuminate\Database\Eloquent\Model $record = null): string
+    public function getTreeRecordTitle(?Model $record = null): string
     {
         if (! $record) {
             return '';
@@ -65,7 +66,7 @@ class SortingCategory extends BasePage
         return [];
     }
 
-    public function getTreeRecordIcon(?\Illuminate\Database\Eloquent\Model $record = null): ?string
+    public function getTreeRecordIcon(?Model $record = null): ?string
     {
         return null;
     }

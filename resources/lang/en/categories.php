@@ -37,6 +37,7 @@ return [
         ],
         'errors' => [
             'sef_key' => 'The SEF key has already been taken.',
+            'parent_id' => 'Cannot select this category as parent - it would create a circular reference',
         ],
     ],
 

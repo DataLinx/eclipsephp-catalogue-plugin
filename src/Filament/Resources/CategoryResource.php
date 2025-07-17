@@ -38,6 +38,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 class CategoryResource extends Resource implements HasShieldPermissions
@@ -74,8 +75,38 @@ class CategoryResource extends Resource implements HasShieldPermissions
                         Select::make('parent_id')
                             ->label(__('eclipse-catalogue::categories.form.fields.parent_id'))
                             ->options(Category::getHierarchicalOptions())
+                            ->afterStateHydrated(function ($state, $context, Set $set): void {
+                                if ($context === 'edit' && $state == -1) {
+                                    $set('parent_id', null);
+                                }
+                            })
                             ->searchable()
-                            ->placeholder(__('eclipse-catalogue::categories.form.fields.parent_id_placeholder')),
+                            ->placeholder(__('eclipse-catalogue::categories.form.fields.parent_id_placeholder'))
+                            ->rules([
+                                fn (?Category $record): callable => function (string $attribute, $value, $fail) use ($record): void {
+                                    if (empty($value) || ! $record) {
+                                        return;
+                                    }
+
+                                    $current = Category::find($value);
+                                    $visited = [];
+
+                                    while ($current && ! in_array($current->id, $visited)) {
+                                        if ($current->id === $record->id) {
+                                            $fail(__('eclipse-catalogue::categories.form.errors.parent_id'));
+
+                                            return;
+                                        }
+
+                                        $visited[] = $current->id;
+                                        $current = $current->parent_id ? Category::find($current->parent_id) : null;
+
+                                        if (count($visited) > 50) {
+                                            break;
+                                        }
+                                    }
+                                },
+                            ]),
                         TextInput::make('name')
                             ->label(__('eclipse-catalogue::categories.form.fields.name'))
                             ->required()
@@ -102,7 +133,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
                                         return;
                                     }
 
-                                    $siteId = Filament::getTenant()->id;
+                                    $siteId = Filament::getTenant()?->id;
                                     $currentLocale = app()->getLocale();
 
                                     $query = Category::where('site_id', $siteId)
@@ -192,19 +223,34 @@ class CategoryResource extends Resource implements HasShieldPermissions
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query): Builder {
+                $selectArray = Category::selectArray();
+
+                unset($selectArray[Category::defaultParentKey()]);
+                $orderedIds = array_keys($selectArray);
+
+                if (! empty($orderedIds)) {
+                    $idsString = implode(',', $orderedIds);
+
+                    return $query->orderByRaw("FIELD(id, {$idsString})");
+                }
+
+                return $query->orderBy('sort');
+            })
             ->columns([
                 ImageColumn::make('image')
                     ->label(__('eclipse-catalogue::categories.table.columns.image'))
                     ->size(40)
                     ->circular()
-                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&color=7F9CF5&background=EBF4FF'),
+                    ->sortable(false)
+                    ->defaultImageUrl(fn (Model $record): string => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&color=7F9CF5&background=EBF4FF'),
 
                 TextColumn::make('name')
                     ->label(__('eclipse-catalogue::categories.table.columns.name'))
                     ->searchable()
-                    ->sortable()
+                    ->sortable(false)
                     ->lineClamp(1)
-                    ->description(fn ($record) => $record->getFullPath())
+                    ->formatStateUsing(fn (Model $record): HtmlString => new HtmlString($record->getTreeFormattedName()))
                     ->tooltip(fn ($record) => $record->getFullPath()),
 
                 TextColumn::make('sef_key')
@@ -213,12 +259,15 @@ class CategoryResource extends Resource implements HasShieldPermissions
                     ->searchable()
                     ->fontFamily('mono')
                     ->copyable()
-                    ->size('sm'),
+                    ->size('sm')
+                    ->sortable(false)
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 IconColumn::make('is_active')
                     ->label(__('eclipse-catalogue::categories.table.columns.is_active'))
                     ->label('Active')
                     ->boolean()
+                    ->sortable(false)
                     ->alignCenter(),
 
                 TextColumn::make('code')
@@ -226,26 +275,32 @@ class CategoryResource extends Resource implements HasShieldPermissions
                     ->searchable()
                     ->fontFamily('mono')
                     ->placeholder('—')
+                    ->sortable(false)
                     ->copyable(),
 
                 IconColumn::make('recursive_browsing')
                     ->label(__('eclipse-catalogue::categories.table.columns.recursive_browsing'))
                     ->boolean()
                     ->alignCenter()
+                    ->sortable(false)
                     ->tooltip(__('eclipse-catalogue::categories.table.tooltips.recursive_browsing')),
 
                 IconColumn::make('description')
                     ->label(__('eclipse-catalogue::categories.table.columns.description'))
                     ->alignCenter()
+                    ->sortable(false)
                     ->getStateUsing(fn ($record) => ! empty($record->description))
                     ->icon(fn ($state) => $state ? 'heroicon-o-document-text' : 'heroicon-o-document')
                     ->color(fn ($state) => $state ? 'success' : 'gray')
                     ->tooltip(fn ($record) => ! empty($record->description) ? __('eclipse-catalogue::categories.table.tooltips.has_description') : __('eclipse-catalogue::categories.table.tooltips.no_description')),
 
                 TextColumn::make('short_desc')
+                    ->sortable(false)
                     ->label(__('eclipse-catalogue::categories.table.columns.short_desc'))
                     ->lineClamp(2),
             ])
+
+            ->paginated([10, 25, 50, 100])
             ->searchable()
             ->filters([
                 TrashedFilter::make(),
@@ -272,9 +327,9 @@ class CategoryResource extends Resource implements HasShieldPermissions
             ])
             ->actions([
                 EditAction::make()
-                    ->label(__('eclipse-catalogue::categories.actions.create')),
-                DeleteAction::make()
                     ->label(__('eclipse-catalogue::categories.actions.edit')),
+                DeleteAction::make()
+                    ->label(__('eclipse-catalogue::categories.actions.delete')),
                 RestoreAction::make()
                     ->label(__('eclipse-catalogue::categories.actions.restore')),
                 ForceDeleteAction::make()
@@ -305,7 +360,6 @@ class CategoryResource extends Resource implements HasShieldPermissions
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->where('site_id', Filament::getTenant()->id)
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);

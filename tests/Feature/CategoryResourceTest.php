@@ -1,34 +1,34 @@
 <?php
 
-use Eclipse\Catalogue\Filament\Resources\CategoryResource\Pages\CreateCategory;
+use Eclipse\Catalogue\Filament\Resources\CategoryResource;
 use Eclipse\Catalogue\Models\Category;
-use Filament\Facades\Filament;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Workbench\App\Models\Site;
+
+uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    $this->site = Site::factory()->create();
-    $this->otherSite = Site::factory()->create();
-
     $this->setUpSuperAdmin();
-
-    Filament::setTenant($this->site);
 });
 
-it('can create a category', function () {
-    $categoryData = [
-        'name' => 'Test Category',
-        'sef_key' => 'test-category',
-        'short_desc' => 'Test description',
-        'description' => 'Test detailed description',
-        'is_active' => true,
-        'recursive_browsing' => false,
-        'code' => 'TEST_CAT',
-        'site_id' => $this->site->id,
-    ];
+it('can render category index page', function (): void {
+    $this->get(CategoryResource::getUrl('index'))
+        ->assertSuccessful();
+});
 
-    Livewire::test(CreateCategory::class)
-        ->fillForm($categoryData)
+it('can create category', function (): void {
+    $factoryData = Category::factory()->definition();
+
+    Livewire::test(CategoryResource\Pages\CreateCategory::class)
+        ->fillForm([
+            'name' => $factoryData['name']['en'],
+            'sef_key' => $factoryData['sef_key']['en'],
+            'short_desc' => $factoryData['short_desc']['en'],
+            'description' => $factoryData['description']['en'],
+            'is_active' => $factoryData['is_active'],
+            'recursive_browsing' => $factoryData['recursive_browsing'],
+            'code' => $factoryData['code'],
+        ])
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -36,18 +36,62 @@ it('can create a category', function () {
     expect($createdCategory->name)->not()->toBeNull();
 });
 
-// it('can read categories in table', function () {
-//     $category = Category::create([
-//         'name' => 'Test Category',
-//         'sef_key' => 'test-category',
-//         'short_desc' => 'Test description',
-//         'description' => 'Test detailed description',
-//         'is_active' => true,
-//         'recursive_browsing' => false,
-//         'code' => 'TEST_CAT',
-//         'site_id' => $this->site->id,
-//     ]);
+it('can edit category', function () {
+    $category = Category::factory()->create();
 
-//     Livewire::test(\Eclipse\Catalogue\Filament\Resources\CategoryResource\Pages\ListCategories::class)
-//         ->assertCanSeeTableRecords([$category]);
-// });
+    Livewire::test(CategoryResource\Pages\EditCategory::class, [
+        'record' => $category->getRouteKey(),
+    ])
+        ->fillForm([
+            'name' => 'Updated Name',
+            'sef_key' => 'updated-name',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($category->fresh())
+        ->name->toBe('Updated Name')
+        ->sef_key->toBe('updated-name');
+});
+
+it('can delete category', function (): void {
+    $category = Category::factory()->create();
+
+    Livewire::test(CategoryResource\Pages\EditCategory::class, [
+        'record' => $category->getRouteKey(),
+    ])
+        ->callAction('delete');
+
+    expect($category->fresh()->trashed())->toBeTrue();
+});
+
+it('validates unique sef_key within same site', function () {
+    $existingCategory = Category::factory()->create([
+        'sef_key' => 'electronics',
+    ]);
+
+    Livewire::test(CategoryResource\Pages\CreateCategory::class)
+        ->fillForm([
+            'name' => 'New Category',
+            'sef_key' => 'electronics',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['sef_key']);
+});
+
+it('prevents circular parent relationship', function () {
+    $parent = Category::factory()->create(['name' => 'Parent']);
+    $child = Category::factory()->create([
+        'name' => 'Child',
+        'parent_id' => $parent->id,
+    ]);
+
+    Livewire::test(CategoryResource\Pages\EditCategory::class, [
+        'record' => $parent->getRouteKey(),
+    ])
+        ->fillForm([
+            'parent_id' => $child->id,
+        ])
+        ->call('save')
+        ->assertHasFormErrors(['parent_id']);
+});

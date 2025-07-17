@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'tenancy' => [
-        'model' => Eclipse\Core\Models\Site::class,
-        'foreign_key' => 'site_id',
+        'model' => null,
+        'foreign_key' => null,
     ],
 ];

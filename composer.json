@@ -24,6 +24,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.3.0"
         }
     },
     "minimum-stability": "dev",
@@ -43,11 +46,18 @@
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
         }
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "git@github.com:DataLinx/eclipsephp-core.git"
+        }
+    ],
     "require": {
         "php": "^8.2",
         "bezhansalleh/filament-shield": "^3.3",
         "datalinx/php-utils": "^2.5",
         "eclipsephp/common": "dev-main",
+        "eclipsephp/core": "dev-main",
         "filament/filament": "^3.3",
         "filament/spatie-laravel-translatable-plugin": "^3.2",
         "solution-forest/filament-tree": "^2.1",

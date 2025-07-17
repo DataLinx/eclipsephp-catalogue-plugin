@@ -5,6 +5,7 @@ namespace Eclipse\Catalogue\Models;
 use Eclipse\Catalogue\Factories\CategoryFactory;
 use Eclipse\Common\Foundation\Models\IsSearchable;
 use Filament\Facades\Filament;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -61,12 +62,45 @@ class Category extends Model
         unset($options[static::defaultParentKey()]);
 
         foreach ($options as $key => $value) {
-            if (str_starts_with($value, '---')) {
-                $options[$key] = substr($value, 3);
+            if (str_starts_with($value, '-')) {
+                $dashCount = 0;
+                while ($dashCount < strlen($value) && $value[$dashCount] === '-') {
+                    $dashCount++;
+                }
+
+                $level = intval($dashCount / 3);
+                $cleanName = ltrim($value, '-');
+
+                $indent = str_repeat('. . . . ', $level);
+                $connector = $level > 0 ? '└─ ' : '';
+
+                $options[$key] = $indent.$connector.$cleanName;
             }
         }
 
         return $options;
+    }
+
+    public function getTreeFormattedName(): string
+    {
+        $selectArray = static::selectArray();
+        $formattedName = $selectArray[$this->id] ?? $this->name;
+
+        if (str_starts_with($formattedName, '-')) {
+            $dashCount = 0;
+            while ($dashCount < strlen($formattedName) && $formattedName[$dashCount] === '-') {
+                $dashCount++;
+            }
+
+            $level = intval($dashCount / 3);
+            $cleanName = ltrim($formattedName, '-');
+            $indent = str_repeat('. . . . ', $level);
+            $icon = $level > 0 ? '└─ ' : '';
+
+            return $indent.$icon.e($cleanName);
+        }
+
+        return e($this->name);
     }
 
     protected function casts(): array
@@ -109,6 +143,12 @@ class Category extends Model
 
     protected static function booted(): void
     {
+        static::addGlobalScope('tenant', function (Builder $builder) {
+            if (Filament::getTenant()) {
+                $builder->where('site_id', Filament::getTenant()->id);
+            }
+        });
+
         static::creating(function (self $category): void {
             if (empty($category->site_id) && Filament::getTenant()) {
                 $category->site_id = Filament::getTenant()->id;
