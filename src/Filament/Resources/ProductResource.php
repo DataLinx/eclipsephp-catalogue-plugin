@@ -3,10 +3,13 @@
 namespace Eclipse\Catalogue\Filament\Resources;
 
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use Eclipse\Catalogue\Filament\Forms\Components\ImageManager;
 use Eclipse\Catalogue\Filament\Resources\ProductResource\Pages;
 use Eclipse\Catalogue\Models\Product;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Concerns\Translatable;
@@ -44,38 +47,75 @@ class ProductResource extends Resource implements HasShieldPermissions
     {
         return $form
             ->schema([
-                TextInput::make('code'),
+                Tabs::make('Product Details')
+                    ->tabs([
+                        Tabs\Tab::make('General')
+                            ->schema([
+                                Section::make('Basic Information')
+                                    ->schema([
+                                        TextInput::make('code')
+                                            ->unique(ignoreRecord: true)
+                                            ->maxLength(255),
 
-                TextInput::make('barcode')
-                    ->maxLength(255),
+                                        TextInput::make('barcode')
+                                            ->unique(ignoreRecord: true)
+                                            ->maxLength(255),
 
-                TextInput::make('manufacturers_code')
-                    ->label('Manufacturer\'s Code')
-                    ->maxLength(255),
+                                        TextInput::make('manufacturers_code')
+                                            ->label('Manufacturer\'s Code')
+                                            ->maxLength(255),
 
-                TextInput::make('suppliers_code')
-                    ->label('Supplier\'s Code')
-                    ->maxLength(255),
+                                        TextInput::make('suppliers_code')
+                                            ->label('Supplier\'s Code')
+                                            ->maxLength(255),
 
-                TextInput::make('net_weight')
-                    ->numeric(),
+                                        TextInput::make('net_weight')
+                                            ->numeric()
+                                            ->suffix('kg'),
 
-                TextInput::make('gross_weight')
-                    ->numeric(),
+                                        TextInput::make('gross_weight')
+                                            ->numeric()
+                                            ->suffix('kg'),
+                                    ])
+                                    ->columns(2),
 
-                TextInput::make('name'),
+                                Section::make('Product Details')
+                                    ->schema([
+                                        TextInput::make('name')
+                                            ->required()
+                                            ->maxLength(255),
 
-                TextInput::make('short_description'),
+                                        TextInput::make('short_description')
+                                            ->maxLength(500),
 
-                RichEditor::make('description'),
+                                        RichEditor::make('description')
+                                            ->columnSpanFull(),
+                                    ]),
 
-                Placeholder::make('created_at')
-                    ->label('Created Date')
-                    ->content(fn (?Product $record): string => $record?->created_at?->diffForHumans() ?? '-'),
+                                Section::make('Timestamps')
+                                    ->schema([
+                                        Placeholder::make('created_at')
+                                            ->label('Created Date')
+                                            ->content(fn (?Product $record): string => $record?->created_at?->diffForHumans() ?? '-'),
 
-                Placeholder::make('updated_at')
-                    ->label('Last Modified Date')
-                    ->content(fn (?Product $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                                        Placeholder::make('updated_at')
+                                            ->label('Last Modified Date')
+                                            ->content(fn (?Product $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                                    ])
+                                    ->columns(2)
+                                    ->hidden(fn (?Product $record) => $record === null),
+                            ]),
+
+                        Tabs\Tab::make('Images')
+                            ->schema([
+                                ImageManager::make('images')
+                                    ->label('')
+                                    ->collection('images')
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+                                    ->columnSpanFull(),
+                            ]),
+                    ])
+                    ->columnSpanFull(),
             ]);
     }
 
