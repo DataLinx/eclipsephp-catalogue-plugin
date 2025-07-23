@@ -13,14 +13,11 @@ trait HandlesImageUploads
             unset($data['images']);
         }
 
-        return parent::mutateFormDataBeforeCreate($data);
+        return $data;
     }
 
     protected function afterCreate(): void
     {
-        if (method_exists(parent::class, 'afterCreate')) {
-            parent::afterCreate();
-        }
 
         $pendingImages = $this->temporaryImages;
 
