@@ -12,8 +12,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ImageManager extends Field
 {
@@ -22,7 +20,7 @@ class ImageManager extends Field
     protected string $collection = 'images';
 
     protected array $acceptedFileTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    
+
     protected array $temporaryImages = [];
 
     protected function setUp(): void
@@ -35,7 +33,6 @@ class ImageManager extends Field
             if ($component->getRecord()) {
                 $component->refreshState();
             }
-            // Clean up old temporary files on load
             $this->cleanupOldTempFiles();
         });
 
@@ -54,32 +51,26 @@ class ImageManager extends Field
             $this->getReorderAction(),
         ]);
 
-        // Dehydrate only on create forms
         $this->dehydrated(fn (?Model $record): bool => ! $record?->exists);
-        
+
         $this->saveRelationshipsUsing(function (Field $component, ?Model $record) {
             if (! $record || ! $record->exists) {
-                // Don't process anything for non-existent records
                 return;
             }
-            
-            // Check if we're in a create context
+
             $livewire = $component->getLivewire();
-            if ($livewire instanceof \Eclipse\Catalogue\Filament\Resources\ProductResource\Pages\CreateProduct) {
-                // Skip processing - let afterCreate handle it
+            if (method_exists($livewire, 'afterCreate') && property_exists($livewire, 'temporaryImages')) {
                 return;
             }
-            
+
             $state = $component->getState();
-            
+
             if (! $state || ! is_array($state)) {
                 return;
             }
-            
-            // Handle new uploads (items without IDs)
+
             foreach ($state as $index => $item) {
                 if (isset($item['id']) && $item['id']) {
-                    // This is an existing media item, update it
                     $media = $record->getMedia($this->collection)->firstWhere('id', $item['id']);
                     if ($media) {
                         $media->setCustomProperty('name', $item['name'] ?? []);
@@ -89,10 +80,8 @@ class ImageManager extends Field
                         $media->save();
                     }
                 } else {
-                    // This is a new upload
                     if (isset($item['temp_file'])) {
-                        // Handle file upload
-                        $tempPath = storage_path('app/public/' . $item['temp_file']);
+                        $tempPath = storage_path('app/public/'.$item['temp_file']);
                         if (file_exists($tempPath)) {
                             $record->addMedia($tempPath)
                                 ->usingFileName($item['file_name'] ?? basename($tempPath))
@@ -103,12 +92,10 @@ class ImageManager extends Field
                                     'position' => $index,
                                 ])
                                 ->toMediaCollection($this->collection);
-                            
-                            // Clean up temp file
+
                             @unlink($tempPath);
                         }
                     } elseif (isset($item['temp_url'])) {
-                        // Handle URL
                         try {
                             $record->addMediaFromUrl($item['temp_url'])
                                 ->usingFileName($item['file_name'] ?? basename($item['temp_url']))
@@ -120,24 +107,20 @@ class ImageManager extends Field
                                 ])
                                 ->toMediaCollection($this->collection);
                         } catch (\Exception $e) {
-                            // Log error or handle failed URL
                         }
                     }
                 }
             }
-            
-            // Handle deletions
+
             $existingIds = collect($state)->pluck('id')->filter()->toArray();
             $record->getMedia($this->collection)
                 ->whereNotIn('id', $existingIds)
                 ->each(fn ($media) => $media->delete());
-            
+
             $this->ensureSingleCoverImage($record);
-            
-            // Clean up old temporary files
             $this->cleanupOldTempFiles();
         });
-        
+
     }
 
     public function collection(string $collection): static
@@ -217,21 +200,21 @@ class ImageManager extends Field
                 }
 
                 $record = $this->getRecord();
-                
+
                 // Handle create forms (no record yet)
                 if (! $record) {
                     $currentState = $this->getState() ?: [];
                     $maxPosition = count($currentState) - 1;
-                    
+
                     // FileUpload returns array of file paths when storeFiles is true
                     foreach ($data['files'] as $filePath) {
                         if (is_string($filePath)) {
-                            $fullPath = storage_path('app/public/' . $filePath);
-                            
+                            $fullPath = storage_path('app/public/'.$filePath);
+
                             if (file_exists($fullPath)) {
-                                $tempId = 'temp_' . uniqid();
+                                $tempId = 'temp_'.uniqid();
                                 $fileName = basename($filePath);
-                                
+
                                 $currentState[] = [
                                     'id' => null,
                                     'temp_id' => $tempId,
@@ -251,17 +234,17 @@ class ImageManager extends Field
                             }
                         }
                     }
-                    
+
                     $this->state($currentState);
-                    
+
                     Notification::make()
-                        ->title(count($data['files']) . " image(s) added successfully")
+                        ->title(count($data['files']).' image(s) added successfully')
                         ->success()
                         ->send();
-                    
+
                     return;
                 }
-                
+
                 // Handle edit forms (record exists)
                 $existingCount = $record->getMedia($this->collection)->count();
                 $maxPosition = $record->getMedia($this->collection)->max(fn ($m) => $m->getCustomProperty('position', 0)) ?? -1;
@@ -269,8 +252,8 @@ class ImageManager extends Field
 
                 foreach ($data['files'] as $filePath) {
                     if (is_string($filePath)) {
-                        $fullPath = storage_path('app/public/' . $filePath);
-                        
+                        $fullPath = storage_path('app/public/'.$filePath);
+
                         if (file_exists($fullPath)) {
                             $record->addMedia($fullPath)
                                 ->usingFileName(basename($filePath))
@@ -283,7 +266,7 @@ class ImageManager extends Field
                                 ->toMediaCollection($this->collection);
 
                             $uploadCount++;
-                            
+
                             // Clean up the temp file after adding to media library
                             @unlink($fullPath);
                         }
@@ -293,7 +276,7 @@ class ImageManager extends Field
                 $this->refreshState();
 
                 Notification::make()
-                    ->title("{$uploadCount} image(s) uploaded successfully")
+                    ->title($uploadCount.' image(s) uploaded successfully')
                     ->success()
                     ->send();
             })
@@ -324,18 +307,18 @@ class ImageManager extends Field
 
                 $urls = array_filter(array_map('trim', explode("\n", $data['urls'])));
                 $record = $this->getRecord();
-                
+
                 // Handle create forms
                 if (! $record) {
                     $currentState = $this->getState() ?: [];
                     $maxPosition = count($currentState) - 1;
                     $successCount = 0;
                     $failedUrls = [];
-                    
+
                     foreach ($urls as $url) {
                         if (filter_var($url, FILTER_VALIDATE_URL)) {
                             // For create forms, we'll store the URL and download it after creation
-                            $tempId = 'temp_' . uniqid();
+                            $tempId = 'temp_'.uniqid();
                             $currentState[] = [
                                 'id' => null,
                                 'temp_id' => $tempId,
@@ -357,24 +340,24 @@ class ImageManager extends Field
                             $failedUrls[] = $url;
                         }
                     }
-                    
+
                     $this->state($currentState);
-                    
+
                     if ($successCount > 0) {
                         Notification::make()
-                            ->title("{$successCount} image(s) added successfully")
+                            ->title($successCount.' image(s) added successfully')
                             ->success()
                             ->send();
                     }
-                    
+
                     if (! empty($failedUrls)) {
                         Notification::make()
                             ->title('Some URLs failed')
-                            ->body("Failed URLs: " . implode(', ', array_slice($failedUrls, 0, 3)) . (count($failedUrls) > 3 ? " and " . (count($failedUrls) - 3) . " more" : ""))
+                            ->body('Failed URLs: '.implode(', ', array_slice($failedUrls, 0, 3)).(count($failedUrls) > 3 ? ' and '.(count($failedUrls) - 3).' more' : ''))
                             ->warning()
                             ->send();
                     }
-                    
+
                     return;
                 }
 
@@ -417,7 +400,7 @@ class ImageManager extends Field
                 if (! empty($failedUrls)) {
                     Notification::make()
                         ->title('Some URLs failed')
-                        ->body("Failed URLs: " . implode(', ', array_slice($failedUrls, 0, 3)) . (count($failedUrls) > 3 ? " and " . (count($failedUrls) - 3) . " more" : ""))
+                        ->body('Failed URLs: '.implode(', ', array_slice($failedUrls, 0, 3)).(count($failedUrls) > 3 ? ' and '.(count($failedUrls) - 3).' more' : ''))
                         ->warning()
                         ->send();
                 }
@@ -436,12 +419,12 @@ class ImageManager extends Field
 
                 $newOrder = $arguments['items'];
                 $record = $this->getRecord();
-                
+
                 // Handle create forms - reorder state
                 if (! $record) {
                     $state = $this->getState();
                     $orderedState = [];
-                    
+
                     // Reorder based on the new UUID order
                     foreach ($newOrder as $position => $uuid) {
                         $item = collect($state)->firstWhere('uuid', $uuid);
@@ -450,21 +433,21 @@ class ImageManager extends Field
                             $orderedState[] = $item;
                         }
                     }
-                    
+
                     $this->state($orderedState);
-                    
+
                     Notification::make()
                         ->title('Images reordered successfully')
                         ->success()
                         ->send();
-                    
+
                     return;
                 }
 
                 // Handle edit forms - update media positions
                 $record->load('media');
                 $mediaCollection = $record->getMedia($this->collection);
-                
+
                 foreach ($newOrder as $position => $uuid) {
                     $media = $mediaCollection->firstWhere('uuid', $uuid);
                     if ($media) {
@@ -472,11 +455,11 @@ class ImageManager extends Field
                         $media->save();
                     }
                 }
-                
+
                 $record->load('media');
-                
+
                 $this->refreshState();
-                
+
                 Notification::make()
                     ->title('Images reordered successfully')
                     ->success()
@@ -541,31 +524,31 @@ class ImageManager extends Field
             ->action(function (array $data, array $arguments): void {
                 $args = $arguments['arguments'] ?? $arguments;
                 $uuid = $args['uuid'] ?? null;
-                
+
                 if (! $uuid) {
                     return;
                 }
-                
+
                 $record = $this->getRecord();
-                
+
                 // Handle create forms - update state directly
                 if (! $record) {
                     $state = $this->getState();
                     $imageIndex = collect($state)->search(fn ($item) => $item['uuid'] === $uuid);
-                    
+
                     if ($imageIndex !== false) {
                         $locale = $data['edit_locale'] ?? array_key_first($this->getAvailableLocales());
                         $state[$imageIndex]['name'][$locale] = $data['name'] ?? '';
                         $state[$imageIndex]['description'][$locale] = $data['description'] ?? '';
-                        
+
                         $this->state($state);
-                        
+
                         Notification::make()
                             ->title('Image details updated')
                             ->success()
                             ->send();
                     }
-                    
+
                     return;
                 }
 
@@ -605,30 +588,31 @@ class ImageManager extends Field
             ->action(function (array $arguments): void {
                 $args = $arguments['arguments'] ?? $arguments;
                 $uuid = $args['uuid'] ?? null;
-                
+
                 if (! $uuid) {
                     return;
                 }
-                
+
                 $record = $this->getRecord();
-                
+
                 // Handle create forms - update state
                 if (! $record) {
                     $state = $this->getState();
-                    
+
                     // Remove is_cover from all images
                     $newState = collect($state)->map(function ($item) use ($uuid) {
                         $item['is_cover'] = $item['uuid'] === $uuid;
+
                         return $item;
                     })->toArray();
-                    
+
                     $this->state($newState);
-                    
+
                     Notification::make()
                         ->title('Cover image updated')
                         ->success()
                         ->send();
-                    
+
                     return;
                 }
 
@@ -709,93 +693,24 @@ class ImageManager extends Field
             $firstMedia->save();
         }
     }
-    
+
     protected function cleanupOldTempFiles(): void
     {
         $tempDir = storage_path('app/public/temp-images');
-        if (!file_exists($tempDir)) {
+        if (! file_exists($tempDir)) {
             return;
         }
-        
+
         // Clean up files older than 24 hours
-        $files = glob($tempDir . '/*');
+        $files = glob($tempDir.'/*');
         $now = time();
-        
+
         foreach ($files as $file) {
             if (is_file($file) && $now - filemtime($file) >= 86400) { // 24 hours
                 @unlink($file);
             }
         }
     }
-    
-    protected function processPendingUploads(Field $component, Model $record): void
-    {
-        $state = $component->getState();
-        if (!is_array($state)) {
-            return;
-        }
-        
-        $processedItems = [];
-        $hasChanges = false;
-        
-        foreach ($state as $index => $item) {
-            if (isset($item['id']) && $item['id']) {
-                // This is an existing media item, keep it as is
-                $processedItems[] = $item;
-            } elseif (isset($item['temp_file'])) {
-                // Handle file upload
-                $tempPath = storage_path('app/public/' . $item['temp_file']);
-                if (file_exists($tempPath)) {
-                    $media = $record->addMedia($tempPath)
-                        ->usingFileName($item['file_name'] ?? basename($tempPath))
-                        ->withCustomProperties([
-                            'name' => $item['name'] ?? [],
-                            'description' => $item['description'] ?? [],
-                            'is_cover' => $item['is_cover'] ?? false,
-                            'position' => $index,
-                        ])
-                        ->toMediaCollection($this->collection);
-                    
-                    // Clean up temp file
-                    @unlink($tempPath);
-                    
-                    // Replace with the actual media data
-                    $processedItems[] = $this->mediaToArray($media);
-                    $hasChanges = true;
-                }
-            } elseif (isset($item['temp_url'])) {
-                // Handle URL
-                try {
-                    $media = $record->addMediaFromUrl($item['temp_url'])
-                        ->usingFileName($item['file_name'] ?? basename($item['temp_url']))
-                        ->withCustomProperties([
-                            'name' => $item['name'] ?? [],
-                            'description' => $item['description'] ?? [],
-                            'is_cover' => $item['is_cover'] ?? false,
-                            'position' => $index,
-                        ])
-                        ->toMediaCollection($this->collection);
-                    
-                    // Replace with the actual media data
-                    $processedItems[] = $this->mediaToArray($media);
-                    $hasChanges = true;
-                } catch (\Exception $e) {
-                    // If URL fails, keep the temporary state
-                    $processedItems[] = $item;
-                }
-            } else {
-                // Keep any other items as is
-                $processedItems[] = $item;
-            }
-        }
-        
-        if ($hasChanges) {
-            // Update the state with processed items
-            $component->state($processedItems);
-            $this->ensureSingleCoverImage($record);
-        }
-    }
-    
 
     public function getDeleteAction(): Action
     {
@@ -809,45 +724,45 @@ class ImageManager extends Field
             ->action(function (array $arguments): void {
                 $args = $arguments['arguments'] ?? $arguments;
                 $uuid = $args['uuid'] ?? null;
-                
+
                 if (! $uuid) {
                     return;
                 }
-                
+
                 $record = $this->getRecord();
-                
+
                 // Handle create forms - remove from state
                 if (! $record) {
                     $state = $this->getState();
                     $imageIndex = collect($state)->search(fn ($item) => $item['uuid'] === $uuid);
-                    
+
                     if ($imageIndex !== false) {
                         $wasCover = $state[$imageIndex]['is_cover'] ?? false;
-                        
+
                         // Clean up temp file if it exists
                         if (isset($state[$imageIndex]['temp_file'])) {
-                            $tempPath = storage_path('app/public/' . $state[$imageIndex]['temp_file']);
+                            $tempPath = storage_path('app/public/'.$state[$imageIndex]['temp_file']);
                             if (file_exists($tempPath)) {
                                 @unlink($tempPath);
                             }
                         }
-                        
+
                         // Remove from state
                         $newState = collect($state)->reject(fn ($item) => $item['uuid'] === $uuid)->values()->toArray();
-                        
+
                         // If deleted image was cover, make first image cover
                         if ($wasCover && count($newState) > 0) {
                             $newState[0]['is_cover'] = true;
                         }
-                        
+
                         $this->state($newState);
-                        
+
                         Notification::make()
                             ->title('Image removed')
                             ->success()
                             ->send();
                     }
-                    
+
                     return;
                 }
 

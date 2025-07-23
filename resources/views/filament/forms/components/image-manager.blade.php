@@ -1,12 +1,11 @@
-    @php
-        $currentLocale = $getSelectedLocale();
-    @endphp
-    
+@php
+    $currentLocale = $getSelectedLocale();
+@endphp
+
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
     <div 
         x-data="imageManager({
             state: $wire.{{ $applyStateBindingModifiers("entangle('{$getStatePath()}')") }},
-            statePath: @js($getStatePath()),
             currentLocale: @js($currentLocale),
         })"
         wire:key="image-manager-{{ $getStatePath() }}-{{ $currentLocale }}"
@@ -149,7 +148,7 @@
     </style>
     
     <script>
-        function imageManager({ state, statePath, currentLocale }) {
+        function imageManager({ state, currentLocale }) {
             return {
                 state: state || [],
                 currentLocale: currentLocale || 'en',

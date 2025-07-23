@@ -9,7 +9,6 @@ use Eclipse\Catalogue\Models\Product;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Concerns\Translatable;
@@ -103,14 +102,14 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->schema([
                         Placeholder::make('created_at')
                             ->label('Created Date')
-                            ->content(fn(?Product $record): string => $record?->created_at?->diffForHumans() ?? '-'),
+                            ->content(fn (?Product $record): string => $record?->created_at?->diffForHumans() ?? '-'),
 
                         Placeholder::make('updated_at')
                             ->label('Last Modified Date')
-                            ->content(fn(?Product $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                            ->content(fn (?Product $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
                     ])
                     ->columns(2)
-                    ->hidden(fn(?Product $record) => $record === null),
+                    ->hidden(fn (?Product $record) => $record === null),
             ]);
     }
 

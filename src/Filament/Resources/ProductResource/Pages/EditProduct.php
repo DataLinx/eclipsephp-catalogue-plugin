@@ -22,26 +22,26 @@ class EditProduct extends EditRecord
             Actions\RestoreAction::make(),
         ];
     }
-    
+
     public function reorderImages(string $statePath, array $uuids): void
     {
-        if (!$this->record) {
+        if (! $this->record) {
             return;
         }
-        
+
         $mediaItems = $this->record->getMedia('images');
         $uuidToId = $mediaItems->pluck('id', 'uuid')->toArray();
-        
+
         $orderedIds = collect($uuids)
             ->map(fn ($uuid) => $uuidToId[$uuid] ?? null)
             ->filter()
             ->toArray();
-        
-        if (!empty($orderedIds)) {
+
+        if (! empty($orderedIds)) {
             $mediaClass = config('media-library.media_model', Media::class);
             $mediaClass::setNewOrder($orderedIds);
         }
-        
+
         $this->data['images'] = $this->record->getMedia('images')
             ->sortBy('order_column')
             ->map(fn ($media) => [
