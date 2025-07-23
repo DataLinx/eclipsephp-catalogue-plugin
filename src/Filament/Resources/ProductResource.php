@@ -47,6 +47,12 @@ class ProductResource extends Resource implements HasShieldPermissions
     {
         return $form
             ->schema([
+                ImageManager::make('images')
+                                    ->label('')
+                                    ->collection('images')
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+                                    ->columnSpanFull(),
+
                 Tabs::make('Product Details')
                     ->tabs([
                         Tabs\Tab::make('General')
@@ -108,11 +114,7 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                         Tabs\Tab::make('Images')
                             ->schema([
-                                ImageManager::make('images')
-                                    ->label('')
-                                    ->collection('images')
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-                                    ->columnSpanFull(),
+                                
                             ]),
                     ])
                     ->columnSpanFull(),

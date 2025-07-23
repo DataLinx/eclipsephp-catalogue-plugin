@@ -47,6 +47,7 @@ class ImageManager extends Field
             $this->getEditAction(),
             $this->getDeleteAction(),
             $this->getCoverAction(),
+            $this->getReorderAction(),
         ]);
 
         $this->dehydrateStateUsing(function ($state, ?Model $record) {
@@ -141,7 +142,6 @@ class ImageManager extends Field
             ->color('primary')
             ->modalHeading('Upload Images')
             ->modalSubmitActionLabel('Upload')
-            ->modalIcon('heroicon-o-photo')
             ->form([
                 FileUpload::make('files')
                     ->label('Choose files')
@@ -196,7 +196,6 @@ class ImageManager extends Field
             ->color('gray')
             ->modalHeading('Add Images from URLs')
             ->modalSubmitActionLabel('Add Images')
-            ->modalIcon('heroicon-o-link')
             ->form([
                 Textarea::make('urls')
                     ->label('Image URLs')
@@ -257,6 +256,40 @@ class ImageManager extends Field
             })
             ->modalWidth('lg')
             ->closeModalByClickingAway(false);
+    }
+
+    public function getReorderAction(): Action
+    {
+        return Action::make('reorder')
+            ->action(function (array $arguments): void {
+                $record = $this->getRecord();
+                if (! $record || ! isset($arguments['items'])) {
+                    return;
+                }
+
+                $newOrder = $arguments['items'];
+
+                $record->load('media');
+                $mediaCollection = $record->getMedia($this->collection);
+                
+                foreach ($newOrder as $position => $uuid) {
+                    $media = $mediaCollection->firstWhere('uuid', $uuid);
+                    if ($media) {
+                        $media->setCustomProperty('position', $position);
+                        $media->save();
+                    }
+                }
+                
+                $record->load('media');
+                
+                $this->refreshState();
+                
+                Notification::make()
+                    ->title('Images reordered successfully')
+                    ->success()
+                    ->send();
+            })
+            ->livewireClickHandlerEnabled(false);
     }
 
     public function getEditAction(): Action
