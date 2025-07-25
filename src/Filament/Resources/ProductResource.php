@@ -106,7 +106,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                                     ->columns(2)
                                     ->hidden(fn (?Product $record) => $record === null),
                             ]),
-                        
+
                         Tabs\Tab::make('Images')
                             ->schema([
                                 ImageManager::make('images')

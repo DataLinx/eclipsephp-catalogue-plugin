@@ -67,7 +67,7 @@
         ],
         "post-install-cmd": "@setup",
         "post-update-cmd": "@setup",
-        "format": "mkdir -p ./build/temp && TMPDIR=./build/temp vendor/bin/pint",
+        "format": "vendor/bin/pint",
         "test": "vendor/bin/testbench package:test",
         "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
         "prepare": "@php vendor/bin/testbench package:discover --ansi",
