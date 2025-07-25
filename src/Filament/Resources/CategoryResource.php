@@ -86,15 +86,15 @@ class CategoryResource extends Resource implements HasShieldPermissions
                             ->searchable()
                             ->placeholder(__('eclipse-catalogue::categories.form.fields.parent_id_placeholder'))
                             ->rules([
-                                fn(?Category $record): callable => function (string $attribute, $value, $fail) use ($record): void {
-                                    if (empty($value) || !$record) {
+                                fn (?Category $record): callable => function (string $attribute, $value, $fail) use ($record): void {
+                                    if (empty($value) || ! $record) {
                                         return;
                                     }
 
                                     $current = Category::find($value);
                                     $visited = [];
 
-                                    while ($current && !in_array($current->id, $visited)) {
+                                    while ($current && ! in_array($current->id, $visited)) {
                                         if ($current->id === $record->id) {
                                             $fail(__('eclipse-catalogue::categories.form.errors.parent_id'));
 
@@ -115,7 +115,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
                             ->required()
                             ->maxLength(255)
                             ->placeholder(__('eclipse-catalogue::categories.form.fields.name_placeholder'))
-                            ->helperText(fn($record) => $record?->getFullPath())
+                            ->helperText(fn ($record) => $record?->getFullPath())
                             ->live(debounce: 300)
                             ->afterStateUpdated(function ($state, Set $set, Get $get): void {
                                 $sefKey = Str::slug($state);
@@ -131,7 +131,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
                             ->placeholder(__('eclipse-catalogue::categories.form.fields.sef_key_placeholder'))
                             ->helperText(__('eclipse-catalogue::categories.form.fields.sef_key_helper'))
                             ->rules([
-                                fn(Get $get, ?Model $record): callable => function (string $attribute, $value, $fail) use ($record): void {
+                                fn (Get $get, ?Model $record): callable => function (string $attribute, $value, $fail) use ($record): void {
                                     if (empty($value)) {
                                         return;
                                     }
@@ -214,11 +214,11 @@ class CategoryResource extends Resource implements HasShieldPermissions
                             ->schema([
                                 Placeholder::make('created_at')
                                     ->label(__('eclipse-catalogue::categories.form.fields.created_at'))
-                                    ->content(fn(?Category $record): string => $record?->created_at?->diffForHumans() ?? 'Not yet saved'),
+                                    ->content(fn (?Category $record): string => $record?->created_at?->diffForHumans() ?? 'Not yet saved'),
 
                                 Placeholder::make('updated_at')
                                     ->label(__('eclipse-catalogue::categories.form.fields.updated_at'))
-                                    ->content(fn(?Category $record): string => $record?->updated_at?->diffForHumans() ?? 'Not yet saved'),
+                                    ->content(fn (?Category $record): string => $record?->updated_at?->diffForHumans() ?? 'Not yet saved'),
                             ]),
                     ])
                     ->collapsible()
@@ -235,7 +235,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
                 unset($selectArray[Category::defaultParentKey()]);
                 $orderedIds = array_keys($selectArray);
 
-                if (!empty($orderedIds)) {
+                if (! empty($orderedIds)) {
                     $idsString = implode(',', $orderedIds);
 
                     return $query->orderByRaw("FIELD(id, {$idsString})");
@@ -249,15 +249,15 @@ class CategoryResource extends Resource implements HasShieldPermissions
                     ->size(40)
                     ->circular()
                     ->sortable(false)
-                    ->defaultImageUrl(fn(Model $record): string => 'https://ui-avatars.com/api/?name=' . urlencode($record->name) . '&color=7F9CF5&background=EBF4FF'),
+                    ->defaultImageUrl(fn (Model $record): string => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&color=7F9CF5&background=EBF4FF'),
 
                 TextColumn::make('name')
                     ->label(__('eclipse-catalogue::categories.table.columns.name'))
                     ->searchable()
                     ->sortable(false)
                     ->lineClamp(1)
-                    ->formatStateUsing(fn(Model $record): HtmlString => new HtmlString($record->getTreeFormattedName()))
-                    ->tooltip(fn($record) => $record->getFullPath()),
+                    ->formatStateUsing(fn (Model $record): HtmlString => new HtmlString($record->getTreeFormattedName()))
+                    ->tooltip(fn ($record) => $record->getFullPath()),
 
                 TextColumn::make('sef_key')
                     ->label(__('eclipse-catalogue::categories.table.columns.sef_key'))
@@ -295,10 +295,10 @@ class CategoryResource extends Resource implements HasShieldPermissions
                     ->label(__('eclipse-catalogue::categories.table.columns.description'))
                     ->alignCenter()
                     ->sortable(false)
-                    ->getStateUsing(fn($record) => !empty($record->description))
-                    ->icon(fn($state) => $state ? 'heroicon-o-document-text' : 'heroicon-o-document')
-                    ->color(fn($state) => $state ? 'success' : 'gray')
-                    ->tooltip(fn($record) => !empty($record->description) ? __('eclipse-catalogue::categories.table.tooltips.has_description') : __('eclipse-catalogue::categories.table.tooltips.no_description')),
+                    ->getStateUsing(fn ($record) => ! empty($record->description))
+                    ->icon(fn ($state) => $state ? 'heroicon-o-document-text' : 'heroicon-o-document')
+                    ->color(fn ($state) => $state ? 'success' : 'gray')
+                    ->tooltip(fn ($record) => ! empty($record->description) ? __('eclipse-catalogue::categories.table.tooltips.has_description') : __('eclipse-catalogue::categories.table.tooltips.no_description')),
 
                 TextColumn::make('short_desc')
                     ->sortable(false)
@@ -327,7 +327,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
 
                 Filter::make('has_description')
                     ->label(__('eclipse-catalogue::categories.filters.has_description'))
-                    ->query(fn(Builder $query): Builder => $query->whereNotNull('description'))
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('description'))
                     ->toggle(),
 
             ])
