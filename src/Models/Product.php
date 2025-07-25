@@ -77,12 +77,7 @@ class Product extends Model
                         'optional' => true,
                     ],
                     [
-                        'name' => 'sef_key_.*',
-                        'type' => 'string',
-                        'optional' => true,
-                    ],
-                    [
-                        'name' => 'short_desc_.*',
+                        'name' => 'short_description_.*',
                         'type' => 'string',
                         'optional' => true,
                     ],
@@ -101,10 +96,12 @@ class Product extends Model
             'search-parameters' => [
                 'query_by' => implode(', ', [
                     'name_*',
-                    'sef_key_*',
-                    'short_desc_*',
+                    'short_description_*',
                     'description_*',
                     'code',
+                    'barcode',
+                    'manufacturers_code',
+                    'suppliers_code',
                 ]),
             ],
         ];

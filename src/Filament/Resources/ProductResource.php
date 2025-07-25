@@ -13,6 +13,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Concerns\Translatable;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
@@ -80,11 +81,11 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                 Placeholder::make('created_at')
                     ->label('Created Date')
-                    ->content(fn (?Product $record): string => $record?->created_at?->diffForHumans() ?? '-'),
+                    ->content(fn(?Product $record): string => $record?->created_at?->diffForHumans() ?? '-'),
 
                 Placeholder::make('updated_at')
                     ->label('Last Modified Date')
-                    ->content(fn (?Product $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                    ->content(fn(?Product $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
             ]);
     }
 
@@ -128,10 +129,17 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->options(Category::getHierarchicalOptions()),
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                    RestoreAction::make(),
+                    ForceDeleteAction::make(),
+                ])
+                    ->hiddenLabel()
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('gray')
+                    ->button(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

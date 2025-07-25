@@ -55,6 +55,39 @@ class Category extends Model
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
+    public function site(): BelongsTo
+    {
+        $tenantModel = config('eclipse-catalogue.tenancy.model');
+        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key', 'site_id');
+
+        return $this->belongsTo($tenantModel, $tenantFK);
+    }
+
+    protected static function formatTreeName(string $value): array
+    {
+        if (! str_starts_with($value, '-')) {
+            return ['name' => $value, 'level' => 0];
+        }
+
+        $dashCount = 0;
+        while ($dashCount < strlen($value) && $value[$dashCount] === '-') {
+            $dashCount++;
+        }
+
+        $level = intval($dashCount / 3);
+        $cleanName = ltrim($value, '-');
+
+        return ['name' => $cleanName, 'level' => $level];
+    }
+
+    protected static function getTreePrefix(int $level): string
+    {
+        $indent = str_repeat('. . . . ', $level);
+        $connector = $level > 0 ? '└─ ' : '';
+
+        return $indent.$connector;
+    }
+
     public static function getHierarchicalOptions(): array
     {
         $options = static::selectArray(5);
@@ -62,20 +95,8 @@ class Category extends Model
         unset($options[static::defaultParentKey()]);
 
         foreach ($options as $key => $value) {
-            if (str_starts_with($value, '-')) {
-                $dashCount = 0;
-                while ($dashCount < strlen($value) && $value[$dashCount] === '-') {
-                    $dashCount++;
-                }
-
-                $level = intval($dashCount / 3);
-                $cleanName = ltrim($value, '-');
-
-                $indent = str_repeat('. . . . ', $level);
-                $connector = $level > 0 ? '└─ ' : '';
-
-                $options[$key] = $indent.$connector.$cleanName;
-            }
+            $formatted = self::formatTreeName($value);
+            $options[$key] = self::getTreePrefix($formatted['level']).$formatted['name'];
         }
 
         return $options;
@@ -86,21 +107,9 @@ class Category extends Model
         $selectArray = static::selectArray();
         $formattedName = $selectArray[$this->id] ?? $this->name;
 
-        if (str_starts_with($formattedName, '-')) {
-            $dashCount = 0;
-            while ($dashCount < strlen($formattedName) && $formattedName[$dashCount] === '-') {
-                $dashCount++;
-            }
+        $formatted = self::formatTreeName($formattedName);
 
-            $level = intval($dashCount / 3);
-            $cleanName = ltrim($formattedName, '-');
-            $indent = str_repeat('. . . . ', $level);
-            $icon = $level > 0 ? '└─ ' : '';
-
-            return $indent.$icon.e($cleanName);
-        }
-
-        return e($this->name);
+        return self::getTreePrefix($formatted['level']).e($formatted['name']);
     }
 
     protected function casts(): array
@@ -144,14 +153,22 @@ class Category extends Model
     protected static function booted(): void
     {
         static::addGlobalScope('tenant', function (Builder $builder) {
-            if (Filament::getTenant()) {
-                $builder->where('site_id', Filament::getTenant()->id);
+            $tenantModel = config('eclipse-catalogue.tenancy.model');
+            $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+            $tenant = Filament::getTenant() ?: (app()->has('current_site') ? app('current_site') : null);
+
+            if ($tenantModel && $tenantFK && $tenant) {
+                $builder->where($tenantFK, $tenant->id);
             }
         });
 
         static::creating(function (self $category): void {
-            if (empty($category->site_id) && Filament::getTenant()) {
-                $category->site_id = Filament::getTenant()->id;
+            $tenantModel = config('eclipse-catalogue.tenancy.model');
+            $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+            $tenant = Filament::getTenant() ?: (app()->has('current_site') ? app('current_site') : null);
+
+            if ($tenantModel && $tenantFK && empty($category->{$tenantFK}) && $tenant) {
+                $category->{$tenantFK} = $tenant->id;
             }
         });
     }

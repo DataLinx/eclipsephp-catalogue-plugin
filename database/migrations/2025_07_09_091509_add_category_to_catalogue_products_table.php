@@ -13,7 +13,7 @@ return new class extends Migration
                 ->nullable()
                 ->after('name')
                 ->constrained('catalogue_categories')
-                ->cascadeOnDelete()
+                ->nullOnDelete()
                 ->cascadeOnUpdate();
         });
     }

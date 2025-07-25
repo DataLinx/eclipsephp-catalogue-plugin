@@ -4,6 +4,7 @@ namespace Tests;
 
 use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as BaseTestCase;
+use Workbench\App\Models\Site;
 use Workbench\App\Models\User;
 
 abstract class TestCase extends BaseTestCase
@@ -14,6 +15,8 @@ abstract class TestCase extends BaseTestCase
 
     protected ?User $user = null;
 
+    protected ?Site $site = null;
+
     protected function setUp(): void
     {
         // Always show errors when testing
@@ -22,6 +25,8 @@ abstract class TestCase extends BaseTestCase
 
         parent::setUp();
 
+        // Disable Scout during tests to prevent indexing operations
+        // This speeds up tests and avoids external dependencies on search services
         config(['scout.driver' => null]);
 
         $this->withoutVite();
@@ -42,10 +47,20 @@ abstract class TestCase extends BaseTestCase
      */
     protected function setUpSuperAdmin(): self
     {
+        // Create the site first
+        $this->site = Site::factory()->create();
+
+        // Create the super admin user
         $this->superAdmin = User::factory()->make();
         $this->superAdmin->assignRole('super_admin')->save();
 
+        // Act as the super admin
         $this->actingAs($this->superAdmin);
+
+        // Set the site as the current tenant
+        if ($this->site) {
+            app()->instance('current_site', $this->site);
+        }
 
         return $this;
     }

@@ -11,7 +11,6 @@ return new class extends Migration
         Schema::create('catalogue_categories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('site_id')
-                ->nullable()
                 ->constrained()
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
