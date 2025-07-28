@@ -3,21 +3,22 @@
 namespace Eclipse\Catalogue\Filament\Resources\CategoryResource\Pages;
 
 use Eclipse\Catalogue\Filament\Resources\CategoryResource;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\RestoreAction;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditCategory extends EditRecord
 {
+    use EditRecord\Concerns\Translatable;
+
     protected static string $resource = CategoryResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
-            ForceDeleteAction::make(),
-            RestoreAction::make(),
+            Actions\LocaleSwitcher::make(),
+            Actions\DeleteAction::make(),
+            Actions\ForceDeleteAction::make(),
+            Actions\RestoreAction::make(),
         ];
     }
 }

@@ -15,13 +15,9 @@ return new class extends Migration
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
             $table->string('name');
-            $table->foreignId('parent_id')
-                ->nullable()
-                ->constrained('catalogue_categories', 'id')
-                ->cascadeOnDelete()
-                ->cascadeOnUpdate();
+            $table->integer('parent_id')->default(-1);
             $table->string('image')->nullable();
-            $table->unsignedInteger('sort')->nullable();
+            $table->integer('sort')->default(0)->index();
             $table->boolean('is_active');
             $table->string('code')->nullable();
             $table->boolean('recursive_browsing')->nullable();

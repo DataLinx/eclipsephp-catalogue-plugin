@@ -2,6 +2,7 @@
 
 namespace Eclipse\Catalogue;
 
+use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Product;
 use Illuminate\Support\Facades\Config;
 use Spatie\LaravelPackageTools\Package;
@@ -28,6 +29,7 @@ class CatalogueServiceProvider extends PackageServiceProvider
 
         $settings += [
             Product::class => Product::getTypesenseSettings(),
+            Category::class => Category::getTypesenseSettings(),
         ];
 
         Config::set('scout.typesense.model-settings', $settings);
