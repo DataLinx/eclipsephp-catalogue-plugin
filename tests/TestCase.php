@@ -30,6 +30,11 @@ abstract class TestCase extends BaseTestCase
         config(['scout.driver' => null]);
 
         $this->withoutVite();
+
+        // Ensure we have at least one site for testing
+        if (Site::count() === 0) {
+            Site::factory()->create();
+        }
     }
 
     /**
@@ -43,24 +48,14 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * Set up default "super admin" user
+     * Set up default "super admin" user and tenant (site)
      */
     protected function setUpSuperAdmin(): self
     {
-        // Create the site first
-        $this->site = Site::factory()->create();
-
-        // Create the super admin user
         $this->superAdmin = User::factory()->make();
         $this->superAdmin->assignRole('super_admin')->save();
 
-        // Act as the super admin
         $this->actingAs($this->superAdmin);
-
-        // Set the site as the current tenant
-        if ($this->site) {
-            app()->instance('current_site', $this->site);
-        }
 
         return $this;
     }

@@ -155,7 +155,7 @@ class Category extends Model
         static::addGlobalScope('tenant', function (Builder $builder) {
             $tenantModel = config('eclipse-catalogue.tenancy.model');
             $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-            $tenant = Filament::getTenant() ?: (app()->has('current_site') ? app('current_site') : null);
+            $tenant = Filament::getTenant();
 
             if ($tenantModel && $tenantFK && $tenant) {
                 $builder->where($tenantFK, $tenant->id);
@@ -165,10 +165,18 @@ class Category extends Model
         static::creating(function (self $category): void {
             $tenantModel = config('eclipse-catalogue.tenancy.model');
             $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-            $tenant = Filament::getTenant() ?: (app()->has('current_site') ? app('current_site') : null);
+            $tenant = Filament::getTenant();
 
-            if ($tenantModel && $tenantFK && empty($category->{$tenantFK}) && $tenant) {
-                $category->{$tenantFK} = $tenant->id;
+            if ($tenantModel && $tenantFK && empty($category->{$tenantFK})) {
+                if ($tenant) {
+                    $category->{$tenantFK} = $tenant->id;
+                } else {
+                    $siteModel = app($tenantModel);
+                    $firstSite = $siteModel::first();
+                    if ($firstSite) {
+                        $category->{$tenantFK} = $firstSite->id;
+                    }
+                }
             }
         });
     }

@@ -53,7 +53,7 @@ class Product extends Model
         return ProductFactory::new();
     }
 
-    public static function getTypesenseSettings(): array
+public static function getTypesenseSettings(): array
     {
         return [
             'collection-schema' => [
@@ -64,6 +64,11 @@ class Product extends Model
                     ],
                     [
                         'name' => 'code',
+                        'type' => 'string',
+                        'optional' => true,
+                    ],
+                    [
+                        'name' => 'barcode',
                         'type' => 'string',
                         'optional' => true,
                     ],
@@ -95,13 +100,11 @@ class Product extends Model
             ],
             'search-parameters' => [
                 'query_by' => implode(', ', [
+                    'code',
+                    'barcode',
                     'name_*',
                     'short_description_*',
                     'description_*',
-                    'code',
-                    'barcode',
-                    'manufacturers_code',
-                    'suppliers_code',
                 ]),
             ],
         ];
