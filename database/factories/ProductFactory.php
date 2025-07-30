@@ -3,8 +3,10 @@
 namespace Eclipse\Catalogue\Factories;
 
 use Eclipse\Catalogue\Models\Product;
+use Exception;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class ProductFactory extends Factory
 {
@@ -43,5 +45,24 @@ class ProductFactory extends Factory
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Product $product) {
+            $imageNumber = rand(1, 15);
+            $imagePath = storage_path("app/public/sample-products/{$imageNumber}.jpg");
+
+            if (file_exists($imagePath)) {
+                try {
+                    $product->addMedia($imagePath)
+                        ->preservingOriginal()
+                        ->withCustomProperties(['is_cover' => true])
+                        ->toMediaCollection('images');
+                } catch (Exception $e) {
+                    Log::warning("Failed to attach image to product {$product->id}: ".$e->getMessage());
+                }
+            }
+        });
     }
 }

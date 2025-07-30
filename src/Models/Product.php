@@ -7,11 +7,14 @@ use Eclipse\Common\Foundation\Models\IsSearchable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Translatable\HasTranslations;
 
-class Product extends Model
+class Product extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, IsSearchable, SoftDeletes;
+    use HasFactory, HasTranslations, InteractsWithMedia, IsSearchable, SoftDeletes;
 
     protected $table = 'catalogue_products';
 
@@ -43,6 +46,34 @@ class Product extends Model
     protected static function newFactory(): ProductFactory
     {
         return ProductFactory::new();
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('images')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+            ->useDisk('public');
+    }
+
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->height(300)
+            ->sharpen(10)
+            ->nonQueued();
+
+        $this->addMediaConversion('preview')
+            ->width(500)
+            ->height(500)
+            ->sharpen(10)
+            ->nonQueued();
+    }
+
+    public function getCoverImageAttribute()
+    {
+        return $this->getMedia('images')->firstWhere('custom_properties.is_cover', true)
+            ?? $this->getFirstMedia('images');
     }
 
     public static function getTypesenseSettings(): array
