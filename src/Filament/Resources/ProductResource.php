@@ -22,6 +22,7 @@ use Filament\Tables\Actions\ForceDeleteAction;
 use Filament\Tables\Actions\ForceDeleteBulkAction;
 use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Actions\RestoreBulkAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -125,6 +126,13 @@ class ProductResource extends Resource implements HasShieldPermissions
         return $table
             ->columns([
                 TextColumn::make('id'),
+
+                ImageColumn::make('cover_image')
+                    ->stacked()
+                    ->label('Image')
+                    ->getStateUsing(fn (Product $record) => $record->getFirstMediaUrl('images', 'thumb'))
+                    ->circular()
+                    ->defaultImageUrl(fn () => 'https://via.placeholder.com/150'),
 
                 TextColumn::make('name')
                     ->toggleable(false),
