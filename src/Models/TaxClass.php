@@ -3,6 +3,7 @@
 namespace Eclipse\Catalogue\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 
@@ -41,11 +42,19 @@ class TaxClass extends Model
         parent::boot();
 
         static::saving(function ($model) {
-            // If this class is being set as default, unset all other defaults
+            // If this class is being set as default, unset all other defaults within the same tenant
             if ($model->is_default) {
-                static::where('is_default', true)
-                    ->where('id', '!=', $model->id)
-                    ->update(['is_default' => false]);
+                $query = static::where('is_default', true)
+                    ->where('id', '!=', $model->id);
+
+                // Add tenant scope if tenancy is configured
+                $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+                $tenantId = $model->getAttribute($tenantFK);
+                if ($tenantFK && $tenantId) {
+                    $query->where($tenantFK, $tenantId);
+                }
+
+                $query->update(['is_default' => false]);
             }
         });
 
@@ -60,11 +69,20 @@ class TaxClass extends Model
     }
 
     /**
-     * Get the default tax class
+     * Get the default tax class for the current tenant
      */
-    public static function getDefault(): ?self
+    public static function getDefault(?int $tenantId = null): ?self
     {
-        return static::where('is_default', true)->first();
+        $query = static::where('is_default', true);
+
+        // Add tenant scope if tenancy is configured
+        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+        $currentTenantId = $tenantId ?: \Filament\Facades\Filament::getTenant()?->id;
+        if ($tenantFK && $currentTenantId) {
+            $query->where($tenantFK, $currentTenantId);
+        }
+
+        return $query->first();
     }
 
     /**
