@@ -53,7 +53,7 @@ class Product extends Model
         return ProductFactory::new();
     }
 
-public static function getTypesenseSettings(): array
+    public static function getTypesenseSettings(): array
     {
         return [
             'collection-schema' => [

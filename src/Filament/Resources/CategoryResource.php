@@ -140,15 +140,18 @@ class CategoryResource extends Resource implements HasShieldPermissions
                                     $siteId = Filament::getTenant()?->id;
                                     $currentLocale = app()->getLocale();
 
-                                    $query = $tenantFK && $siteId
-                                        ? Category::where($tenantFK, $siteId)
-                                        : Category::query()
-                                            ->where(function ($q) use ($value, $currentLocale): void {
-                                                $q->whereJsonContains('sef_key', $value)
-                                                    ->orWhereJsonContains("sef_key->{$currentLocale}", $value);
-                                            });
+                                    $query = Category::query();
 
-                                    if ($record) {
+                                    if ($tenantFK && $siteId) {
+                                        $query->where($tenantFK, $siteId);
+                                    }
+
+                                    $query->where(function ($q) use ($value, $currentLocale): void {
+                                        $q->whereJsonContains('sef_key', $value)
+                                            ->orWhereJsonContains("sef_key->{$currentLocale}", $value);
+                                    });
+
+                                    if ($record && $record->exists) {
                                         $query->where('id', '!=', $record->id);
                                     }
 
