@@ -18,7 +18,8 @@ class CatalogueServiceProvider extends PackageServiceProvider
             ->hasConfigFile()
             ->hasTranslations()
             ->discoversMigrations()
-            ->runsMigrations();
+            ->runsMigrations()
+            ->hasAssets();
     }
 
     public function register()

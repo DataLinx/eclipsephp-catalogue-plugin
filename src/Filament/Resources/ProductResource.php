@@ -130,9 +130,37 @@ class ProductResource extends Resource implements HasShieldPermissions
                 ImageColumn::make('cover_image')
                     ->stacked()
                     ->label('Image')
-                    ->getStateUsing(fn (Product $record) => $record->getFirstMediaUrl('images', 'thumb'))
+                    ->getStateUsing(function (Product $record) {
+                        $url = $record->getFirstMediaUrl('images', 'thumb');
+
+                        return $url ?: null;
+                    })
                     ->circular()
-                    ->defaultImageUrl(fn () => 'https://via.placeholder.com/150'),
+                    ->defaultImageUrl(url('/images/placeholder.svg'))
+                    ->extraImgAttributes(function (Product $record) {
+                        $coverMedia = $record->getMedia('images')
+                            ->filter(fn ($media) => $media->getCustomProperty('is_cover', false))
+                            ->first();
+
+                        if (! $coverMedia) {
+                            $coverMedia = $record->getMedia('images')->first();
+                        }
+
+                        $fullImageUrl = $coverMedia ? $coverMedia->getUrl() : null;
+                        $imageName = $coverMedia ? json_encode($coverMedia->getCustomProperty('name', [])) : '{}';
+                        $imageDescription = $coverMedia ? json_encode($coverMedia->getCustomProperty('description', [])) : '{}';
+
+                        return [
+                            'class' => 'cursor-pointer product-image-trigger',
+                            'data-url' => $fullImageUrl ?: url('/images/placeholder.svg'),
+                            'data-image-name' => htmlspecialchars($imageName, ENT_QUOTES, 'UTF-8'),
+                            'data-image-description' => htmlspecialchars($imageDescription, ENT_QUOTES, 'UTF-8'),
+                            'data-product-name' => htmlspecialchars(json_encode($record->getTranslations('name')), ENT_QUOTES, 'UTF-8'),
+                            'data-product-code' => $record->code ?: '',
+                            'data-filename' => $coverMedia ? $coverMedia->file_name : '',
+                            'onclick' => 'event.stopPropagation(); return false;',
+                        ];
+                    }),
 
                 TextColumn::make('name')
                     ->toggleable(false),

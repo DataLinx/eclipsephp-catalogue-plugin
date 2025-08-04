@@ -141,7 +141,7 @@
              x-cloak>
             
             <div class="eclipse-image-lightbox-container" @click.stop>
-                <button @click="lightboxOpen = false" class="eclipse-image-lightbox-close">
+                <button type="button" @click.stop="lightboxOpen = false" class="eclipse-image-lightbox-close">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -158,13 +158,13 @@
                 </div>
                 <template x-if="state && state.length > 1">
                     <div>
-                        <button @click.stop="previousImage()" class="eclipse-image-lightbox-nav prev">
+                        <button type="button" @click.stop.prevent="previousImage()" class="eclipse-image-lightbox-nav prev">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                             </svg>
                         </button>
                         
-                        <button @click.stop="nextImage()" class="eclipse-image-lightbox-nav next">
+                        <button type="button" @click.stop.prevent="nextImage()" class="eclipse-image-lightbox-nav next">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                             </svg>
@@ -355,6 +355,19 @@
                     this.lightboxAlt = '';
                     this.lightboxName = '';
                     this.lightboxDescription = '';
+                    
+                    // Add keyboard navigation listeners
+                    document.addEventListener('keydown', (e) => {
+                        if (this.lightboxOpen) {
+                            if (e.key === 'ArrowLeft') {
+                                e.preventDefault();
+                                this.previousImage();
+                            } else if (e.key === 'ArrowRight') {
+                                e.preventDefault();
+                                this.nextImage();
+                            }
+                        }
+                    });
                 },
                 
                 getLocalizedName(image) {
