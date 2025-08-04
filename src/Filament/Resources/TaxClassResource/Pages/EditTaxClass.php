@@ -25,21 +25,30 @@ class EditTaxClass extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // If this class is being set as default, unset all other defaults
+        // If this class is being set as default, unset all other defaults within the same tenant
         if ($data['is_default'] ?? false) {
-            TaxClass::where('is_default', true)
-                ->where('id', '!=', $this->record->id)
-                ->update(['is_default' => false]);
+            $query = TaxClass::where('is_default', true)
+                ->where('id', '!=', $this->record->id);
+
+            // Add tenant scope if tenancy is configured
+            $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+            $tenantId = $this->record->getAttribute($tenantFK);
+            if ($tenantFK && $tenantId) {
+                $query->where($tenantFK, $tenantId);
+            }
+
+            $query->update(['is_default' => false]);
         }
 
         // Ensure tenant id is preserved if tenancy is configured
-        if (config('eclipse-catalogue.tenancy.foreign_key') && ! isset($data[config('eclipse-catalogue.tenancy.foreign_key')])) {
+        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+        if ($tenantFK && ! isset($data[$tenantFK])) {
             // Use current tenant from Filament or preserve existing
-            $currentTenant = Filament::getTenant();
-            if ($currentTenant) {
-                $data[config('eclipse-catalogue.tenancy.foreign_key')] = $currentTenant->id;
+            $tenantId = Filament::getTenant()?->id;
+            if ($tenantId) {
+                $data[$tenantFK] = $tenantId;
             } else {
-                $data[config('eclipse-catalogue.tenancy.foreign_key')] = $this->record->getAttribute(config('eclipse-catalogue.tenancy.foreign_key'));
+                $data[$tenantFK] = $this->record->getAttribute($tenantFK);
             }
         }
 

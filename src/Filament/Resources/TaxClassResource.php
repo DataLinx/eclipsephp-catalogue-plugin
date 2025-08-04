@@ -5,6 +5,7 @@ namespace Eclipse\Catalogue\Filament\Resources;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Eclipse\Catalogue\Filament\Resources\TaxClassResource\Pages;
 use Eclipse\Catalogue\Models\TaxClass;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -34,6 +35,10 @@ class TaxClassResource extends Resource implements HasShieldPermissions
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static bool $isScopedToTenant = true;
+
+    protected static ?string $tenantOwnershipRelationshipName = 'tenant';
+
     public static function getModelLabel(): string
     {
         return __('eclipse-catalogue::tax-class.singular');
@@ -52,7 +57,21 @@ class TaxClassResource extends Resource implements HasShieldPermissions
                     ->label(__('eclipse-catalogue::tax-class.fields.name'))
                     ->required()
                     ->maxLength(255)
-                    ->unique(ignoreRecord: true),
+                    ->unique(
+                        table: 'pim_tax_classes',
+                        column: 'name',
+                        ignoreRecord: true,
+                        modifyRuleUsing: function ($rule) {
+                            // Add tenant scope to unique validation
+                            $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+                            $tenantId = Filament::getTenant()?->id;
+                            if ($tenantFK && $tenantId) {
+                                $rule->where($tenantFK, $tenantId);
+                            }
+
+                            return $rule;
+                        }
+                    ),
 
                 Textarea::make('description')
                     ->label(__('eclipse-catalogue::tax-class.fields.description'))
