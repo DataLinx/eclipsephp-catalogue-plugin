@@ -4,13 +4,16 @@ namespace Eclipse\Catalogue\Filament\Resources;
 
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Eclipse\Catalogue\Filament\Resources\ProductResource\Pages;
+use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Product;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Concerns\Translatable;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
@@ -20,6 +23,7 @@ use Filament\Tables\Actions\ForceDeleteBulkAction;
 use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -65,6 +69,12 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                 TextInput::make('name'),
 
+                Select::make('category_id')
+                    ->label('Category')
+                    ->options(Category::getHierarchicalOptions())
+                    ->searchable()
+                    ->placeholder('Category (optional)'),
+
                 TextInput::make('short_description'),
 
                 RichEditor::make('description'),
@@ -87,6 +97,8 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                 TextColumn::make('name')
                     ->toggleable(false),
+
+                TextColumn::make('category.name'),
 
                 TextColumn::make('short_description')
                     ->words(5),
@@ -111,12 +123,23 @@ class ProductResource extends Resource implements HasShieldPermissions
             ->searchable()
             ->filters([
                 TrashedFilter::make(),
+                SelectFilter::make('category_id')
+                    ->label('Categories')
+                    ->multiple()
+                    ->options(Category::getHierarchicalOptions()),
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                    RestoreAction::make(),
+                    ForceDeleteAction::make(),
+                ])
+                    ->hiddenLabel()
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('gray')
+                    ->button(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
