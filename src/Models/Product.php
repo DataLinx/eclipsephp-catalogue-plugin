@@ -6,6 +6,7 @@ use Eclipse\Catalogue\Factories\ProductFactory;
 use Eclipse\Common\Foundation\Models\IsSearchable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -26,6 +27,7 @@ class Product extends Model implements HasMedia
         'net_weight',
         'gross_weight',
         'name',
+        'category_id',
         'short_description',
         'description',
     ];
@@ -41,7 +43,13 @@ class Product extends Model implements HasMedia
         'short_description' => 'array',
         'description' => 'array',
         'deleted_at' => 'datetime',
+        'category_id' => 'integer',
     ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     protected static function newFactory(): ProductFactory
     {
