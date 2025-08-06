@@ -136,7 +136,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                         return $url ?: null;
                     })
                     ->circular()
-                    ->defaultImageUrl(url('/images/placeholder.svg'))
+                    ->defaultImageUrl(static::getPlaceholderImageUrl())
                     ->extraImgAttributes(function (Product $record) {
                         $coverMedia = $record->getMedia('images')
                             ->filter(fn ($media) => $media->getCustomProperty('is_cover', false))
@@ -152,7 +152,7 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                         return [
                             'class' => 'cursor-pointer product-image-trigger',
-                            'data-url' => $fullImageUrl ?: url('/images/placeholder.svg'),
+                            'data-url' => $fullImageUrl ?: static::getPlaceholderImageUrl(),
                             'data-image-name' => htmlspecialchars($imageName, ENT_QUOTES, 'UTF-8'),
                             'data-image-description' => htmlspecialchars($imageDescription, ENT_QUOTES, 'UTF-8'),
                             'data-product-name' => htmlspecialchars(json_encode($record->getTranslations('name')), ENT_QUOTES, 'UTF-8'),
@@ -239,6 +239,13 @@ class ProductResource extends Resource implements HasShieldPermissions
         return array_filter([
             'Code' => $record->code,
         ]);
+    }
+
+    protected static function getPlaceholderImageUrl(): string
+    {
+        $svg = view('eclipse-catalogue::components.placeholder-image')->render();
+
+        return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
 
     public static function getPermissionPrefixes(): array
