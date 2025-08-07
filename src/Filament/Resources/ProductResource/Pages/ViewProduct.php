@@ -4,14 +4,14 @@ namespace Eclipse\Catalogue\Filament\Resources\ProductResource\Pages;
 
 use Eclipse\Catalogue\Filament\Resources\ProductResource;
 use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ViewRecord;
 use Nben\FilamentRecordNav\Actions\NextRecordAction;
 use Nben\FilamentRecordNav\Actions\PreviousRecordAction;
 use Nben\FilamentRecordNav\Concerns\WithRecordNavigation;
 
-class EditProduct extends EditRecord
+class ViewProduct extends ViewRecord
 {
-    use EditRecord\Concerns\Translatable;
+    use ViewRecord\Concerns\Translatable;
     use WithRecordNavigation;
 
     protected static string $resource = ProductResource::class;
@@ -22,10 +22,7 @@ class EditProduct extends EditRecord
             PreviousRecordAction::make(),
             NextRecordAction::make(),
             Actions\LocaleSwitcher::make(),
-            Actions\ViewAction::make(),
-            Actions\DeleteAction::make(),
-            Actions\ForceDeleteAction::make(),
-            Actions\RestoreAction::make(),
+            Actions\EditAction::make(),
         ];
     }
 }
