@@ -48,6 +48,7 @@
         "bezhansalleh/filament-shield": "^3.3",
         "datalinx/php-utils": "^2.5",
         "eclipsephp/common": "dev-main",
+        "eclipsephp/world-plugin": "dev-main",
         "filament/filament": "^3.3",
         "filament/spatie-laravel-media-library-plugin": "^3.2",
         "filament/spatie-laravel-translatable-plugin": "^3.2",

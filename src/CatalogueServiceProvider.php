@@ -18,6 +18,7 @@ class CatalogueServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasConfigFile()
             ->hasTranslations()
+            ->hasViews()
             ->discoversMigrations()
             ->runsMigrations()
             ->hasAssets();
@@ -35,5 +36,15 @@ class CatalogueServiceProvider extends PackageServiceProvider
         ];
 
         Config::set('scout.typesense.model-settings', $settings);
+    }
+
+    public function boot()
+    {
+        parent::boot();
+
+        // Register Livewire components
+        if (class_exists(\Livewire\Livewire::class)) {
+            \Livewire\Livewire::component('eclipse-catalogue::tenant-switcher', \Eclipse\Catalogue\Livewire\TenantSwitcher::class);
+        }
     }
 }
