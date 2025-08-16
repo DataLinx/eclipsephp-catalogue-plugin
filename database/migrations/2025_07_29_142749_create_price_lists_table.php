@@ -10,8 +10,10 @@ return new class extends Migration
     {
         Schema::create('pim_price_lists', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('currency_id')
-                ->constrained('world_currencies')
+            $table->string('currency_id', 3);
+            $table->foreign('currency_id')
+                ->references('id')
+                ->on('world_currencies')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
             $table->string('name');
@@ -24,6 +26,7 @@ return new class extends Migration
 
         // More price list data, optionally in tenant-scope
         Schema::create('pim_price_list_data', function (Blueprint $table) {
+            $table->id();
             $table->foreignId('price_list_id')
                 ->constrained('pim_price_lists')
                 ->cascadeOnUpdate()
