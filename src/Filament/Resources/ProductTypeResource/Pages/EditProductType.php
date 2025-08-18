@@ -1,37 +1,40 @@
 <?php
 
-namespace Eclipse\Catalogue\Filament\Resources\PriceListResource\Pages;
+namespace Eclipse\Catalogue\Filament\Resources\ProductTypeResource\Pages;
 
-use Eclipse\Catalogue\Filament\Resources\PriceListResource;
+use Eclipse\Catalogue\Filament\Resources\ProductTypeResource;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
-use Eclipse\Catalogue\Traits\HasPriceListForm;
+use Eclipse\Catalogue\Traits\HasProductTypeForm;
 use Eclipse\Catalogue\Traits\HasTenantFields;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\LocaleSwitcher;
 use Filament\Actions\RestoreAction;
 use Filament\Forms\Form;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\EditRecord\Concerns\Translatable;
 use Illuminate\Database\Eloquent\Model;
 
-class EditPriceList extends EditRecord
+class EditProductType extends EditRecord
 {
-    use HandlesTenantData, HasPriceListForm, HasTenantFields;
+    use HandlesTenantData, HasProductTypeForm, HasTenantFields, Translatable;
+
+    protected static string $resource = ProductTypeResource::class;
 
     protected function getFormTenantFlags(): array
     {
-        return ['is_active', 'is_default', 'is_default_purchase'];
+        return ['is_active', 'is_default'];
     }
 
     protected function getFormMutuallyExclusiveFlagSets(): array
     {
-        return [['is_default', 'is_default_purchase']];
+        return [];
     }
-
-    protected static string $resource = PriceListResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
+            LocaleSwitcher::make(),
             DeleteAction::make(),
             ForceDeleteAction::make(),
             RestoreAction::make(),
@@ -40,7 +43,7 @@ class EditPriceList extends EditRecord
 
     public function form(Form $form): Form
     {
-        return $form->schema($this->buildPriceListFormSchema());
+        return $form->schema($this->buildProductTypeFormSchema());
     }
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -49,12 +52,11 @@ class EditPriceList extends EditRecord
 
         if (! $tenantFK) {
             // No tenancy - load single record
-            $priceListData = $this->record->priceListData()->first();
+            $typeData = $this->record->productTypeData()->first();
 
-            if ($priceListData) {
-                $data['is_active'] = $priceListData->is_active;
-                $data['is_default'] = $priceListData->is_default;
-                $data['is_default_purchase'] = $priceListData->is_default_purchase;
+            if ($typeData) {
+                $data['is_active'] = $typeData->is_active;
+                $data['is_default'] = $typeData->is_default;
             }
 
             return $data;
@@ -62,14 +64,13 @@ class EditPriceList extends EditRecord
 
         // Load tenant-specific data
         $tenantData = [];
-        $priceListData = $this->record->priceListData;
+        $typeDataRecords = $this->record->productTypeData;
 
-        foreach ($priceListData as $tenantRecord) {
+        foreach ($typeDataRecords as $tenantRecord) {
             $tenantId = $tenantRecord->getAttribute($tenantFK);
             $tenantData[$tenantId] = [
                 'is_active' => $tenantRecord->is_active,
                 'is_default' => $tenantRecord->is_default,
-                'is_default_purchase' => $tenantRecord->is_default_purchase,
             ];
         }
 
@@ -88,10 +89,10 @@ class EditPriceList extends EditRecord
         $tenantData = $this->extractTenantDataFromFormData($data);
 
         // Clean main record data
-        $priceListData = $this->cleanFormDataForMainRecord($data);
+        $typeData = $this->cleanFormDataForMainRecord($data);
 
         // Use the model's updateWithTenantData method
-        $record->updateWithTenantData($priceListData, $tenantData);
+        $record->updateWithTenantData($typeData, $tenantData);
 
         return $record;
     }

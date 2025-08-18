@@ -3,6 +3,7 @@
 namespace Eclipse\Catalogue\Seeders;
 
 use Eclipse\Catalogue\Models\Product;
+use Eclipse\Catalogue\Models\ProductType;
 use Exception;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Http;
@@ -13,10 +14,17 @@ class ProductSeeder extends Seeder
     public function run(): void
     {
         $this->ensureSampleImagesExist();
+        $this->ensureProductTypesExist();
+
+        $productTypes = ProductType::all();
 
         Product::factory()
             ->count(100)
-            ->create();
+            ->create([
+                'product_type_id' => function () use ($productTypes) {
+                    return $productTypes->random()->id;
+                },
+            ]);
     }
 
     private function ensureSampleImagesExist(): void
@@ -54,5 +62,14 @@ class ProductSeeder extends Seeder
         }
 
         $this->command->info('Sample images ready!');
+    }
+
+    private function ensureProductTypesExist(): void
+    {
+        $productTypes = ProductType::all();
+
+        if ($productTypes->isEmpty()) {
+            $this->call(ProductTypeSeeder::class);
+        }
     }
 }

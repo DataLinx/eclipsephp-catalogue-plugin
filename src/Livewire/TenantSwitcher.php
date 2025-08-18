@@ -76,14 +76,8 @@ class TenantSwitcher extends LivewireComponent
 
                 // Store current tenant data before switching
                 if ($previousTenant && $previousTenant != $state) {
-                    // Get current tenant data
-                    $currentData = [
-                        'is_active' => $get("tenant_data.{$previousTenant}.is_active") ?? true,
-                        'is_default' => $get("tenant_data.{$previousTenant}.is_default") ?? false,
-                        'is_default_purchase' => $get("tenant_data.{$previousTenant}.is_default_purchase") ?? false,
-                    ];
+                    $currentData = $get("tenant_data.{$previousTenant}") ?? [];
 
-                    // Store it in a persistent field
                     $allTenantData = $get('all_tenant_data') ?? [];
                     $allTenantData[$previousTenant] = $currentData;
                     $set('all_tenant_data', $allTenantData);
@@ -95,10 +89,7 @@ class TenantSwitcher extends LivewireComponent
                 // Load data for new tenant
                 $allTenantData = $get('all_tenant_data') ?? [];
                 if (isset($allTenantData[$state])) {
-                    $tenantData = $allTenantData[$state];
-                    $set("tenant_data.{$state}.is_active", $tenantData['is_active'] ?? true);
-                    $set("tenant_data.{$state}.is_default", $tenantData['is_default'] ?? false);
-                    $set("tenant_data.{$state}.is_default_purchase", $tenantData['is_default_purchase'] ?? false);
+                    $set("tenant_data.{$state}", $allTenantData[$state]);
                 }
 
                 // Trigger form update when tenant changes

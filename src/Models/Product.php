@@ -3,10 +3,13 @@
 namespace Eclipse\Catalogue\Models;
 
 use Eclipse\Catalogue\Factories\ProductFactory;
+use Eclipse\Catalogue\Traits\HasTenantScopedData;
 use Eclipse\Common\Foundation\Models\IsSearchable;
+use Eclipse\World\Models\Country;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -15,7 +18,7 @@ use Spatie\Translatable\HasTranslations;
 
 class Product extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, InteractsWithMedia, IsSearchable, SoftDeletes;
+    use HasFactory, HasTenantScopedData, HasTranslations, InteractsWithMedia, IsSearchable, SoftDeletes;
 
     protected $table = 'catalogue_products';
 
@@ -28,8 +31,12 @@ class Product extends Model implements HasMedia
         'gross_weight',
         'name',
         'category_id',
+        'product_type_id',
         'short_description',
         'description',
+        'origin_country_id',
+        'meta_description',
+        'meta_title',
     ];
 
     public array $translatable = [
@@ -44,11 +51,80 @@ class Product extends Model implements HasMedia
         'description' => 'array',
         'deleted_at' => 'datetime',
         'category_id' => 'integer',
+        'product_type_id' => 'integer',
+        'available_from_date' => 'datetime',
+        'is_active' => 'boolean',
+        'has_free_delivery' => 'boolean',
     ];
+
+    protected $appends = [
+        'is_active',
+        'has_free_delivery',
+        'available_from_date',
+        'sorting_label',
+    ];
+
+    protected static string $tenantDataRelation = 'productData';
+
+    protected static string $tenantDataModel = ProductData::class;
+
+    protected static array $tenantFlags = ['is_active', 'has_free_delivery'];
+
+    protected static array $mutuallyExclusiveFlagSets = [];
+
+    protected static array $uniqueFlagsPerTenant = [];
+
+    protected static array $tenantAttributes = ['sorting_label', 'available_from_date'];
 
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(ProductType::class, 'product_type_id');
+    }
+
+    public function originCountry(): BelongsTo
+    {
+        return $this->belongsTo(Country::class, 'origin_country_id', 'id');
+    }
+
+    /**
+     * Get all per-tenant data rows for this product.
+     */
+    public function productData(): HasMany
+    {
+        return $this->hasMany(ProductData::class, 'product_id');
+    }
+
+    /**
+     * Prices relationship.
+     */
+    public function prices(): HasMany
+    {
+        return $this->hasMany(\Eclipse\Catalogue\Models\Product\Price::class);
+    }
+
+    public function getIsActiveAttribute(): bool
+    {
+        return $this->getTenantFlagValue('is_active');
+    }
+
+    public function getHasFreeDeliveryAttribute(): bool
+    {
+        return $this->getTenantFlagValue('has_free_delivery');
+    }
+
+    public function getAvailableFromDateAttribute()
+    {
+        return $this->currentTenantData()?->available_from_date;
+    }
+
+    public function getSortingLabelAttribute(): ?string
+    {
+        return $this->currentTenantData()?->sorting_label;
     }
 
     protected static function newFactory(): ProductFactory

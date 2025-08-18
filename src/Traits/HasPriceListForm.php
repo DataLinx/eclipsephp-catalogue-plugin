@@ -2,7 +2,7 @@
 
 namespace Eclipse\Catalogue\Traits;
 
-use Eclipse\Catalogue\Forms\Components\TenantFieldsComponent;
+use Eclipse\Catalogue\Forms\Components\GenericTenantFieldsComponent;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
@@ -76,7 +76,14 @@ trait HasPriceListForm
 
         // Add tenant fields if tenancy is enabled
         if ($this->isTenancyEnabled()) {
-            $baseSchema[] = TenantFieldsComponent::make();
+            $baseSchema[] = GenericTenantFieldsComponent::make(
+                tenantFlags: ['is_active', 'is_default', 'is_default_purchase'],
+                mutuallyExclusiveFlagSets: [['is_default', 'is_default_purchase']],
+                translationPrefix: 'eclipse-catalogue::price-list',
+                extraFieldsBuilder: null,
+                sectionTitle: __('eclipse-catalogue::price-list.sections.tenant_settings'),
+                sectionDescription: __('eclipse-catalogue::price-list.sections.tenant_settings_description'),
+            );
         } else {
             // No tenancy - add simple settings section
             $baseSchema[] = Section::make(__('eclipse-catalogue::price-list.sections.settings'))

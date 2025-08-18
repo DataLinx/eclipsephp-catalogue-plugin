@@ -1,35 +1,44 @@
 <?php
 
-namespace Eclipse\Catalogue\Filament\Resources\PriceListResource\Pages;
+namespace Eclipse\Catalogue\Filament\Resources\ProductTypeResource\Pages;
 
-use Eclipse\Catalogue\Filament\Resources\PriceListResource;
-use Eclipse\Catalogue\Models\PriceList;
+use Eclipse\Catalogue\Filament\Resources\ProductTypeResource;
+use Eclipse\Catalogue\Models\ProductType;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
-use Eclipse\Catalogue\Traits\HasPriceListForm;
+use Eclipse\Catalogue\Traits\HasProductTypeForm;
 use Eclipse\Catalogue\Traits\HasTenantFields;
+use Filament\Actions\LocaleSwitcher;
 use Filament\Forms\Form;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\CreateRecord\Concerns\Translatable;
 use Illuminate\Database\Eloquent\Model;
 
-class CreatePriceList extends CreateRecord
+class CreateProductType extends CreateRecord
 {
-    use HandlesTenantData, HasPriceListForm, HasTenantFields;
+    use HandlesTenantData, HasProductTypeForm, HasTenantFields, Translatable;
+
+    protected static string $resource = ProductTypeResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            LocaleSwitcher::make(),
+        ];
+    }
 
     protected function getFormTenantFlags(): array
     {
-        return ['is_active', 'is_default', 'is_default_purchase'];
+        return ['is_active', 'is_default'];
     }
 
     protected function getFormMutuallyExclusiveFlagSets(): array
     {
-        return [['is_default', 'is_default_purchase']];
+        return [];
     }
-
-    protected static string $resource = PriceListResource::class;
 
     public function form(Form $form): Form
     {
-        return $form->schema($this->buildPriceListFormSchema());
+        return $form->schema($this->buildProductTypeFormSchema());
     }
 
     protected function handleRecordCreation(array $data): Model
@@ -38,10 +47,10 @@ class CreatePriceList extends CreateRecord
         $tenantData = $this->extractTenantDataFromFormData($data);
 
         // Clean main record data
-        $priceListData = $this->cleanFormDataForMainRecord($data);
+        $typeData = $this->cleanFormDataForMainRecord($data);
 
         // Use the model's createWithTenantData method
-        return PriceList::createWithTenantData($priceListData, $tenantData);
+        return ProductType::createWithTenantData($typeData, $tenantData);
     }
 
     protected function getFormActions(): array
