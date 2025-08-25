@@ -8,9 +8,13 @@ use Eclipse\Catalogue\Filament\Resources\ProductResource\Pages;
 use Eclipse\Catalogue\Forms\Components\GenericTenantFieldsComponent;
 use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Product;
+use Eclipse\Catalogue\Models\Property;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
 use Eclipse\Catalogue\Traits\HasTenantFields;
 use Eclipse\World\Models\Country;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -18,6 +22,7 @@ use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Concerns\Translatable;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\ActionGroup;
@@ -97,37 +102,26 @@ class ProductResource extends Resource implements HasShieldPermissions
                                             ->required()
                                             ->maxLength(255),
 
-                                        Select::make('product_type_id')
-                                            ->label(__('eclipse-catalogue::product.fields.product_type'))
-                                            ->relationship(
-                                                'type',
-                                                'name',
-                                                function ($query) {
-                                                    $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                                                    $currentTenant = \Filament\Facades\Filament::getTenant();
-
-                                                    if ($tenantFK && $currentTenant) {
-                                                        return $query->whereHas('productTypeData', function ($q) use ($tenantFK, $currentTenant) {
-                                                            $q->where($tenantFK, $currentTenant->id)
-                                                                ->where('is_active', true);
-                                                        });
-                                                    }
-
-                                                    return $query->whereHas('productTypeData', function ($q) {
-                                                        $q->where('is_active', true);
-                                                    });
-                                                }
-                                            )
-                                            ->searchable()
-                                            ->preload()
-                                            ->placeholder(__('eclipse-catalogue::product.placeholders.product_type')),
-
-                                        RichEditor::make('short_description')
-                                            ->columnSpanFull(),
+                                        TextInput::make('short_description')
+                                            ->maxLength(500),
+                                        // Category is tenant-scoped; configured in Tenant Settings section.
 
                                         RichEditor::make('description')
                                             ->columnSpanFull(),
                                     ]),
+
+                                Section::make('Timestamps')
+                                    ->schema([
+                                        Placeholder::make('created_at')
+                                            ->label('Created Date')
+                                            ->content(fn (?Product $record): string => $record?->created_at?->diffForHumans() ?? '-'),
+
+                                        Placeholder::make('updated_at')
+                                            ->label('Last Modified Date')
+                                            ->content(fn (?Product $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                                    ])
+                                    ->columns(2)
+                                    ->hidden(fn (?Product $record) => $record === null),
 
                                 Section::make(__('eclipse-catalogue::product.sections.additional'))
                                     ->schema([
@@ -158,7 +152,6 @@ class ProductResource extends Resource implements HasShieldPermissions
                                     ->collapsible()
                                     ->persistCollapsed(),
 
-                                // Tenant settings (embedded in General tab)
                                 GenericTenantFieldsComponent::make(
                                     tenantFlags: ['is_active', 'has_free_delivery'],
                                     mutuallyExclusiveFlagSets: [],
@@ -188,6 +181,196 @@ class ProductResource extends Resource implements HasShieldPermissions
                                     sectionTitle: __('eclipse-catalogue::product.sections.tenant_settings'),
                                     sectionDescription: __('eclipse-catalogue::product.sections.tenant_settings_description'),
                                 ),
+                            ]),
+
+                        Tabs\Tab::make('Properties')
+                            ->schema([
+                                Section::make('Product Type Selection')
+                                    ->description('Select the product type to see available properties')
+                                    ->schema([
+                                        Select::make('product_type_id')
+                                            ->label(__('eclipse-catalogue::product.fields.product_type'))
+                                            ->relationship(
+                                                'type',
+                                                'name',
+                                                function ($query) {
+                                                    $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+                                                    $currentTenant = \Filament\Facades\Filament::getTenant();
+
+                                                    if ($tenantFK && $currentTenant) {
+                                                        return $query->whereHas('productTypeData', function ($q) use ($tenantFK, $currentTenant) {
+                                                            $q->where($tenantFK, $currentTenant->id)
+                                                                ->where('is_active', true);
+                                                        });
+                                                    }
+
+                                                    return $query->whereHas('productTypeData', function ($q) {
+                                                        $q->where('is_active', true);
+                                                    });
+                                                }
+                                            )
+                                            ->searchable()
+                                            ->preload()
+                                            ->placeholder(__('eclipse-catalogue::product.placeholders.product_type'))
+                                            ->reactive(),
+                                    ])
+                                    ->columns(1),
+
+                                Section::make('Product Properties')
+                                    ->description('Select values for properties applicable to this product type')
+                                    ->schema(function (Get $get, ?Product $record) {
+                                        $productTypeId = $get('product_type_id') ?? $record?->product_type_id;
+
+                                        if (! $productTypeId) {
+                                            return [
+                                                Placeholder::make('no_type')
+                                                    ->label('')
+                                                    ->content('Please select a product type first to see available properties.'),
+                                            ];
+                                        }
+
+                                        $properties = Property::where('is_active', true)
+                                            ->where(function ($query) use ($productTypeId) {
+                                                $query->where('is_global', true)
+                                                    ->orWhereHas('productTypes', function ($q) use ($productTypeId) {
+                                                        $q->where('pim_product_types.id', $productTypeId);
+                                                    });
+                                            })
+                                            ->with(['values' => function ($query) {
+                                                $query->orderBy('sort');
+                                            }])
+                                            ->get();
+
+                                        $schema = [];
+
+                                        foreach ($properties as $property) {
+                                            $valueOptions = $property->values->pluck('value', 'id')->toArray();
+
+                                            if (empty($valueOptions)) {
+                                                continue;
+                                            }
+
+                                            $fieldType = $property->getFormFieldType();
+                                            $fieldName = "property_values_{$property->id}";
+
+                                            switch ($fieldType) {
+                                                case 'radio':
+                                                    $schema[] = Radio::make($fieldName)
+                                                        ->label($property->name)
+                                                        ->options($valueOptions)
+                                                        ->descriptions($property->values->pluck('info_url', 'id')->filter()->toArray())
+                                                        ->helperText($property->description)
+                                                        ->createOptionForm([
+                                                            TextInput::make('value')
+                                                                ->label('Value')
+                                                                ->required()
+                                                                ->maxLength(255),
+                                                            TextInput::make('info_url')
+                                                                ->label('Info URL')
+                                                                ->url()
+                                                                ->maxLength(255),
+                                                            TextInput::make('image')
+                                                                ->label('Image')
+                                                                ->maxLength(255),
+                                                        ])
+                                                        ->createOptionAction(function ($action) {
+                                                            return $action
+                                                                ->modalHeading('Create New Property Value')
+                                                                ->modalSubmitActionLabel('Create Value');
+                                                        });
+                                                    break;
+
+                                                case 'select':
+                                                    $schema[] = Select::make($fieldName)
+                                                        ->label($property->name)
+                                                        ->options($valueOptions)
+                                                        ->searchable()
+                                                        ->createOptionForm([
+                                                            TextInput::make('value')
+                                                                ->label('Value')
+                                                                ->required()
+                                                                ->maxLength(255),
+                                                            TextInput::make('info_url')
+                                                                ->label('Info URL')
+                                                                ->url()
+                                                                ->maxLength(255),
+                                                            TextInput::make('image')
+                                                                ->label('Image')
+                                                                ->maxLength(255),
+                                                        ])
+                                                        ->createOptionAction(function ($action) {
+                                                            return $action
+                                                                ->modalHeading('Create New Property Value')
+                                                                ->modalSubmitActionLabel('Create Value');
+                                                        })
+                                                        ->helperText($property->description);
+                                                    break;
+
+                                                case 'checkbox':
+                                                    $schema[] = CheckboxList::make($fieldName)
+                                                        ->label($property->name)
+                                                        ->options($valueOptions)
+                                                        ->descriptions($property->values->pluck('info_url', 'id')->filter()->toArray())
+                                                        ->helperText($property->description)
+                                                        ->rules($property->max_values > 1 ? ["max:{$property->max_values}"] : [])
+                                                        ->createOptionForm([
+                                                            TextInput::make('value')
+                                                                ->label('Value')
+                                                                ->required()
+                                                                ->maxLength(255),
+                                                            TextInput::make('info_url')
+                                                                ->label('Info URL')
+                                                                ->url()
+                                                                ->maxLength(255),
+                                                            TextInput::make('image')
+                                                                ->label('Image')
+                                                                ->maxLength(255),
+                                                        ])
+                                                        ->createOptionAction(function ($action) {
+                                                            return $action
+                                                                ->modalHeading('Create New Property Value')
+                                                                ->modalSubmitActionLabel('Create Value');
+                                                        });
+                                                    break;
+
+                                                case 'multiselect':
+                                                    $schema[] = Select::make($fieldName)
+                                                        ->label($property->name)
+                                                        ->options($valueOptions)
+                                                        ->multiple()
+                                                        ->searchable()
+                                                        ->createOptionForm([
+                                                            TextInput::make('value')
+                                                                ->label('Value')
+                                                                ->required()
+                                                                ->maxLength(255),
+                                                            TextInput::make('info_url')
+                                                                ->label('Info URL')
+                                                                ->url()
+                                                                ->maxLength(255),
+                                                            TextInput::make('image')
+                                                                ->label('Image')
+                                                                ->maxLength(255),
+                                                        ])
+                                                        ->createOptionAction(function ($action) {
+                                                            return $action
+                                                                ->modalHeading('Create New Property Value')
+                                                                ->modalSubmitActionLabel('Create Value');
+                                                        })
+                                                        ->helperText($property->description)
+                                                        ->rules($property->max_values > 1 ? ["max:{$property->max_values}"] : []);
+                                                    break;
+                                            }
+                                        }
+
+                                        return $schema ?: [
+                                            Placeholder::make('no_properties')
+                                                ->label('')
+                                                ->content('No properties are configured for this product type.'),
+                                        ];
+                                    })
+                                    ->reactive()
+                                    ->columns(2),
                             ]),
 
                         Tabs\Tab::make('Images')

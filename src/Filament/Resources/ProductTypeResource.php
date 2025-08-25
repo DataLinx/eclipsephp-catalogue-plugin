@@ -4,6 +4,7 @@ namespace Eclipse\Catalogue\Filament\Resources;
 
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Eclipse\Catalogue\Filament\Resources\ProductTypeResource\Pages;
+use Eclipse\Catalogue\Filament\Resources\ProductTypeResource\RelationManagers;
 use Eclipse\Catalogue\Models\ProductType;
 use Filament\Resources\Concerns\Translatable;
 use Filament\Resources\Resource;
@@ -91,6 +92,13 @@ class ProductTypeResource extends Resource implements HasShieldPermissions
                     ForceDeleteAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\PropertiesRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

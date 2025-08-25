@@ -6,6 +6,7 @@ use Eclipse\Catalogue\Factories\ProductTypeFactory;
 use Eclipse\Catalogue\Traits\HasTenantScopedData;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Translatable\HasTranslations;
@@ -46,6 +47,17 @@ class ProductType extends Model
     public function productTypeData(): HasMany
     {
         return $this->hasMany(ProductTypeData::class, 'product_type_id');
+    }
+
+    /**
+     * Get all properties assigned to this product type.
+     */
+    public function properties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class, 'pim_product_type_has_property')
+            ->withPivot('sort')
+            ->withTimestamps()
+            ->orderByPivot('sort');
     }
 
     /**
@@ -92,6 +104,17 @@ class ProductType extends Model
             'is_active' => 'boolean',
             'is_default' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (ProductType $productType) {
+            // Auto-assign global properties to new product types
+            $globalProperties = Property::where('is_global', true)->get();
+            foreach ($globalProperties as $property) {
+                $productType->properties()->attach($property->id, ['sort' => 0]);
+            }
+        });
     }
 
     protected static function newFactory(): ProductTypeFactory
