@@ -52,4 +52,23 @@ return [
         'available_from_date' => 'Date/time when the product becomes available',
         'sorting_label' => 'Optional label used to influence sorting within lists',
     ],
+
+    'price' => [
+        'section' => 'Product price list',
+        'list' => 'Price list',
+        'fields' => [
+            'price_list' => 'Price list',
+            'price' => 'Price',
+            'tax_included' => 'Incl. tax',
+            'valid_from' => 'Valid from',
+            'valid_to' => 'Valid to',
+        ],
+        'actions' => [
+            'add' => 'Add price',
+        ],
+        'validation' => [
+            'unique_title' => 'Duplicate price',
+            'unique_body' => 'A price with the same Price List, Price and Valid From already exists in the form.',
+        ],
+    ],
 ];

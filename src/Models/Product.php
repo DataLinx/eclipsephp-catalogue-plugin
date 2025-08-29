@@ -32,6 +32,7 @@ class Product extends Model implements HasMedia
         'gross_weight',
         'name',
         'product_type_id',
+        'category_id',
         'short_description',
         'description',
         'origin_country_id',
@@ -54,6 +55,7 @@ class Product extends Model implements HasMedia
         'meta_title' => 'array',
         'meta_description' => 'array',
         'deleted_at' => 'datetime',
+        'category_id' => 'integer',
         'product_type_id' => 'integer',
         'available_from_date' => 'datetime',
         'is_active' => 'boolean',
@@ -100,14 +102,6 @@ class Product extends Model implements HasMedia
         return $this->belongsTo(Country::class, 'origin_country_id', 'id');
     }
 
-    /**
-     * Get all per-tenant data rows for this product.
-     */
-    public function productData(): HasMany
-    {
-        return $this->hasMany(ProductData::class, 'product_id');
-    }
-
     public function getIsActiveAttribute(): bool
     {
         return $this->getTenantFlagValue('is_active');
@@ -116,6 +110,22 @@ class Product extends Model implements HasMedia
     public function getHasFreeDeliveryAttribute(): bool
     {
         return $this->getTenantFlagValue('has_free_delivery');
+    }
+
+    /**
+     * Get all per-tenant data rows for this product.
+     */
+    public function productData(): HasMany
+    {
+        return $this->hasMany(ProductData::class, 'product_id');
+    }
+
+    /**
+     * Prices relationship.
+     */
+    public function prices(): HasMany
+    {
+        return $this->hasMany(\Eclipse\Catalogue\Models\Product\Price::class);
     }
 
     public function getAvailableFromDateAttribute()

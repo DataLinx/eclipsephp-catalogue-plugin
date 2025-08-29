@@ -121,9 +121,26 @@ class GenericTenantFieldsComponent
         if ($extraFieldsBuilder) {
             $extra = $extraFieldsBuilder($tenantId, $tenantName);
             if (is_array($extra)) {
+                // For extra fields, also persist on change if supported
+                $enhancedExtra = [];
+                foreach ($extra as $component) {
+                    // Ensure extra components push state immediately while editing
+                    if (method_exists($component, 'live')) {
+                        $component = $component->live();
+                    }
+                    if (method_exists($component, 'afterStateUpdated')) {
+                        $component = $component->afterStateUpdated(function ($state, callable $set, callable $get) use ($tenantId) {
+                            $currentData = $get("tenant_data.{$tenantId}") ?? [];
+                            $allTenantData = $get('all_tenant_data') ?? [];
+                            $allTenantData[$tenantId] = $currentData;
+                            $set('all_tenant_data', $allTenantData);
+                        });
+                    }
+                    $enhancedExtra[] = $component;
+                }
                 $schema = [
                     ...$schema,
-                    ...$extra,
+                    ...$enhancedExtra,
                 ];
             }
         }
