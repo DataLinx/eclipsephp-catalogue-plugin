@@ -12,6 +12,7 @@ use Eclipse\Catalogue\Models\Property;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
 use Eclipse\Catalogue\Traits\HasTenantFields;
 use Eclipse\World\Models\Country;
+use Eclipse\World\Models\TariffCode;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
@@ -132,6 +133,22 @@ class ProductResource extends Resource implements HasShieldPermissions
                                             ->searchable(['id', 'name'])
                                             ->preload()
                                             ->placeholder(__('eclipse-catalogue::product.placeholders.origin_country_id')),
+
+                                        Select::make('tariff_code_id')
+                                            ->label(__('eclipse-catalogue::product.fields.tariff_code_id'))
+                                            ->relationship('tariffCode', 'code')
+                                            ->getOptionLabelFromRecordUsing(function (TariffCode $record) {
+                                                $name = $record->name;
+                                                if (is_array($name)) {
+                                                    $locale = app()->getLocale();
+                                                    $name = $name[$locale] ?? reset($name);
+                                                }
+
+                                                return $record->code.' — '.$name;
+                                            })
+                                            ->searchable(['code'])
+                                            ->preload()
+                                            ->placeholder(__('eclipse-catalogue::product.placeholders.tariff_code_id')),
                                     ])
                                     ->collapsible()
                                     ->persistCollapsed(),

@@ -7,6 +7,7 @@ return [
     'fields' => [
         'product_type' => 'Tip proizvoda',
         'origin_country_id' => 'Država izvora',
+        'tariff_code_id' => 'Carinska oznaka (CN)',
         'meta_title' => 'Meta naslov',
         'meta_description' => 'Meta opis',
         'is_active' => 'Aktiven',
@@ -19,6 +20,7 @@ return [
     'placeholders' => [
         'product_type' => 'Izberi tip proizvoda (neobvezno)',
         'origin_country_id' => 'Izberi državo izvora',
+        'tariff_code_id' => 'Izberi carinsko oznako (CN)',
         'meta_title' => 'SEO meta naslov',
         'meta_description' => 'SEO meta opis',
         'category_id' => 'Izberi kategorijo (neobvezno)',

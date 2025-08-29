@@ -7,6 +7,7 @@ return [
     'fields' => [
         'product_type' => 'Product Type',
         'origin_country_id' => 'Country of Origin',
+        'tariff_code_id' => 'Tariff code (CN)',
         'meta_title' => 'Meta Title',
         'meta_description' => 'Meta Description',
         'is_active' => 'Active',
@@ -19,6 +20,7 @@ return [
     'placeholders' => [
         'product_type' => 'Select product type (optional)',
         'origin_country_id' => 'Select country of origin',
+        'tariff_code_id' => 'Select tariff code (CN)',
         'meta_title' => 'SEO meta title',
         'meta_description' => 'SEO meta description',
         'category_id' => 'Select category (optional)',
