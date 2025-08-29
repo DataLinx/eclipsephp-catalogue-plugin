@@ -3,6 +3,7 @@
 namespace Eclipse\Catalogue\Seeders;
 
 use Eclipse\Catalogue\Models\Category;
+use Eclipse\Catalogue\Models\Group;
 use Eclipse\Catalogue\Models\Product;
 use Eclipse\Catalogue\Models\ProductData;
 use Eclipse\Catalogue\Models\ProductType;
@@ -17,6 +18,7 @@ class ProductSeeder extends Seeder
     {
         $this->ensureSampleImagesExist();
         $this->ensureProductTypesExist();
+        $this->ensureGroupsExist();
 
         $productTypes = ProductType::all();
 
@@ -33,7 +35,7 @@ class ProductSeeder extends Seeder
 
         $products = Product::query()->latest('id')->take(100)->get();
 
-        foreach ($products as $product) {
+        foreach ($products as $index => $product) {
             if ($tenantFK && $tenantModel && class_exists($tenantModel)) {
                 $tenants = $tenantModel::all();
                 foreach ($tenants as $tenant) {
@@ -50,6 +52,14 @@ class ProductSeeder extends Seeder
                         'has_free_delivery' => false,
                         'category_id' => $categoryId,
                     ]);
+
+                    // Get groups for this specific tenant
+                    $tenantGroups = Group::where($tenantFK, $tenant->id)->get();
+                    $groupsToAdd = $this->determineGroupsForProduct($index, $tenantGroups);
+
+                    foreach ($groupsToAdd as $group) {
+                        $group->addProduct($product);
+                    }
                 }
             } else {
                 $categoryId = Category::query()->inRandomOrder()->value('id');
@@ -60,8 +70,32 @@ class ProductSeeder extends Seeder
                     'has_free_delivery' => false,
                     'category_id' => $categoryId,
                 ]);
+
+                // For non-tenant scenarios, use all groups
+                $groups = Group::all();
+                $groupsToAdd = $this->determineGroupsForProduct($index, $groups);
+                foreach ($groupsToAdd as $group) {
+                    $group->addProduct($product);
+                }
             }
         }
+    }
+
+    private function determineGroupsForProduct(int $productIndex, $groups): array
+    {
+        $groupsToAdd = [];
+
+        // Randomly assign 1-3 groups per product
+        $numGroupsToAdd = rand(1, min(3, $groups->count()));
+
+        // Get random groups for this product
+        $randomGroups = $groups->random($numGroupsToAdd);
+
+        foreach ($randomGroups as $group) {
+            $groupsToAdd[] = $group;
+        }
+
+        return $groupsToAdd;
     }
 
     private function ensureSampleImagesExist(): void
@@ -107,6 +141,15 @@ class ProductSeeder extends Seeder
 
         if ($productTypes->isEmpty()) {
             $this->call(ProductTypeSeeder::class);
+        }
+    }
+
+    private function ensureGroupsExist(): void
+    {
+        $groups = Group::all();
+
+        if ($groups->isEmpty()) {
+            $this->call(GroupSeeder::class);
         }
     }
 }

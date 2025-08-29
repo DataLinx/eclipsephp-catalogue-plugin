@@ -38,31 +38,6 @@ class CreateProduct extends CreateRecord
         return $data;
     }
 
-    protected function afterCreate(): void
-    {
-        if ($this->record) {
-            $state = $this->form->getRawState();
-            $propertyData = [];
-            foreach ($state as $key => $value) {
-                if (is_string($key) && str_starts_with($key, 'property_values_')) {
-                    $propertyId = str_replace('property_values_', '', $key);
-                    $propertyData[$propertyId] = $value;
-                }
-            }
-
-            foreach ($propertyData as $propertyId => $values) {
-                if ($values) {
-                    $valuesToAttach = is_array($values) ? $values : [$values];
-                    $valuesToAttach = array_filter($valuesToAttach);
-
-                    if (! empty($valuesToAttach)) {
-                        $this->record->propertyValues()->attach($valuesToAttach);
-                    }
-                }
-            }
-        }
-    }
-
     protected function getFormTenantFlags(): array
     {
         return ['is_active', 'has_free_delivery'];
@@ -84,6 +59,73 @@ class CreateProduct extends CreateRecord
         $productData = $this->cleanFormDataForMainRecord($data);
 
         return Product::createWithTenantData($productData, $tenantData);
+    }
+
+    protected function afterCreate(): void
+    {
+        /** @var Product $product */
+        $product = $this->record;
+
+        if (! $product) {
+            return;
+        }
+
+        $state = $this->form->getState();
+        $rawState = $this->form->getRawState();
+        $tenantData = $state['tenant_data'] ?? [];
+
+        // Handle property values
+        $propertyData = [];
+        foreach ($rawState as $key => $value) {
+            if (is_string($key) && str_starts_with($key, 'property_values_')) {
+                $propertyId = str_replace('property_values_', '', $key);
+                $propertyData[$propertyId] = $value;
+            }
+        }
+
+        foreach ($propertyData as $propertyId => $values) {
+            if ($values) {
+                $valuesToAttach = is_array($values) ? $values : [$values];
+                $valuesToAttach = array_filter($valuesToAttach);
+
+                if (! empty($valuesToAttach)) {
+                    $product->propertyValues()->attach($valuesToAttach);
+                }
+            }
+        }
+
+        // Handle tenant/group associations
+        $isTenancyEnabled = (bool) config('eclipse-catalogue.tenancy.model');
+        if ($isTenancyEnabled) {
+            foreach ($tenantData as $tenantId => $data) {
+                $groupIds = array_filter(array_map('intval', (array) ($data['groups'] ?? [])));
+                foreach ($groupIds as $groupId) {
+                    $group = \Eclipse\Catalogue\Models\Group::find($groupId);
+                    $tenantFK = config('eclipse-catalogue.tenancy.foreign_key', 'site_id');
+                    if ($group && (int) $group->getAttribute($tenantFK) === (int) $tenantId) {
+                        $group->addProduct($product);
+                    }
+                }
+            }
+        } else {
+            $flatGroupIds = [];
+            if (isset($state['groups'])) {
+                $flatGroupIds = array_filter(array_map('intval', (array) $state['groups']));
+            } else {
+                foreach ($tenantData as $data) {
+                    foreach ((array) ($data['groups'] ?? []) as $id) {
+                        $flatGroupIds[] = (int) $id;
+                    }
+                }
+                $flatGroupIds = array_values(array_unique(array_filter($flatGroupIds)));
+            }
+
+            foreach ($flatGroupIds as $groupId) {
+                if ($group = \Eclipse\Catalogue\Models\Group::find($groupId)) {
+                    $group->addProduct($product);
+                }
+            }
+        }
     }
 
     protected function getFormActions(): array

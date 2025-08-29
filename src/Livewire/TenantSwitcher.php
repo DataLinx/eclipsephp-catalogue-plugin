@@ -70,16 +70,20 @@ class TenantSwitcher extends LivewireComponent
             ->default($currentTenant?->id)
             ->selectablePlaceholder(false)
             ->live()
+            // Ensure we have a previous-tenant tracker from the start
+            ->afterStateHydrated(function ($state, callable $set) {
+                $set('_previous_tenant', $state);
+            })
             ->afterStateUpdated(function ($state, callable $set, callable $get, $livewire) {
-                // Get previous tenant from a tracking field
+                // Snapshot the full sub-state of the tenant we're leaving
                 $previousTenant = $get('_previous_tenant');
+                $fromTenant = $previousTenant ?: $get('selected_tenant');
 
-                // Store current tenant data before switching
-                if ($previousTenant && $previousTenant != $state) {
-                    $currentData = $get("tenant_data.{$previousTenant}") ?? [];
+                if ($fromTenant && $fromTenant != $state) {
+                    $currentData = $get("tenant_data.{$fromTenant}") ?? [];
 
                     $allTenantData = $get('all_tenant_data') ?? [];
-                    $allTenantData[$previousTenant] = $currentData;
+                    $allTenantData[$fromTenant] = $currentData;
                     $set('all_tenant_data', $allTenantData);
                 }
 
@@ -127,7 +131,21 @@ class TenantSwitcher extends LivewireComponent
             ->default($currentTenant?->id)
             ->selectablePlaceholder(false)
             ->live()
+            ->afterStateHydrated(function ($state, callable $set) {
+                $set('_previous_tenant', $state);
+            })
             ->afterStateUpdated(function ($state, callable $set, callable $get, $livewire) {
+                $previousTenant = $get('_previous_tenant');
+                $fromTenant = $previousTenant ?: $get('selected_tenant');
+
+                if ($fromTenant && $fromTenant != $state) {
+                    $currentData = $get("tenant_data.{$fromTenant}") ?? [];
+                    $allTenantData = $get('all_tenant_data') ?? [];
+                    $allTenantData[$fromTenant] = $currentData;
+                    $set('all_tenant_data', $allTenantData);
+                }
+
+                $set('_previous_tenant', $state);
                 $livewire->dispatch('tenant-changed', $state);
             });
 

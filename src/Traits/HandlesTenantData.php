@@ -42,12 +42,7 @@ trait HandlesTenantData
         $selectedTenant = $formData['selected_tenant'] ?? null;
 
         if ($selectedTenant && config('eclipse-catalogue.tenancy.foreign_key')) {
-            $currentData = [];
-
-            // Build current data from tenant flags
-            foreach ($this->getFormTenantFlags() as $flag) {
-                $currentData[$flag] = $formData['tenant_data'][$selectedTenant][$flag] ?? $this->getDefaultValueForFlag($flag);
-            }
+            $currentData = $formData['tenant_data'][$selectedTenant] ?? [];
 
             $allTenantData = $formData['all_tenant_data'] ?? [];
             $allTenantData[$selectedTenant] = $currentData;
