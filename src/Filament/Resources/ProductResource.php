@@ -6,6 +6,7 @@ use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Eclipse\Catalogue\Filament\Forms\Components\ImageManager;
 use Eclipse\Catalogue\Filament\Resources\ProductResource\Pages;
 use Eclipse\Catalogue\Forms\Components\GenericTenantFieldsComponent;
+use Eclipse\Catalogue\Forms\Components\InlineTranslatableField;
 use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Product;
 use Eclipse\Catalogue\Models\Property;
@@ -244,122 +245,224 @@ class ProductResource extends Resource implements HasShieldPermissions
                                         $schema = [];
 
                                         foreach ($properties as $property) {
-                                            $valueOptions = $property->values->pluck('value', 'id')->toArray();
+                                            if ($property->isListType()) {
+                                                $valueOptions = $property->values->pluck('value', 'id')->toArray();
 
-                                            if (empty($valueOptions)) {
-                                                continue;
+                                                if (empty($valueOptions)) {
+                                                    continue;
+                                                }
+
+                                                $fieldType = $property->getFormFieldType();
+                                                $fieldName = "property_values_{$property->id}";
+
+                                                switch ($fieldType) {
+                                                    case 'radio':
+                                                        $schema[] = Radio::make($fieldName)
+                                                            ->label($property->name)
+                                                            ->options($valueOptions)
+                                                            ->descriptions($property->values->pluck('info_url', 'id')->filter()->toArray())
+                                                            ->helperText($property->description)
+                                                            ->createOptionForm([
+                                                                TextInput::make('value')
+                                                                    ->label('Value')
+                                                                    ->required()
+                                                                    ->maxLength(255),
+                                                                TextInput::make('info_url')
+                                                                    ->label('Info URL')
+                                                                    ->url()
+                                                                    ->maxLength(255),
+                                                                TextInput::make('image')
+                                                                    ->label('Image')
+                                                                    ->maxLength(255),
+                                                            ])
+                                                            ->createOptionAction(function ($action) {
+                                                                return $action
+                                                                    ->modalHeading('Create New Property Value')
+                                                                    ->modalSubmitActionLabel('Create Value');
+                                                            });
+                                                        break;
+
+                                                    case 'select':
+                                                        $schema[] = Select::make($fieldName)
+                                                            ->label($property->name)
+                                                            ->options($valueOptions)
+                                                            ->searchable()
+                                                            ->createOptionForm([
+                                                                TextInput::make('value')
+                                                                    ->label('Value')
+                                                                    ->required()
+                                                                    ->maxLength(255),
+                                                                TextInput::make('info_url')
+                                                                    ->label('Info URL')
+                                                                    ->url()
+                                                                    ->maxLength(255),
+                                                                TextInput::make('image')
+                                                                    ->label('Image')
+                                                                    ->maxLength(255),
+                                                            ])
+                                                            ->createOptionAction(function ($action) {
+                                                                return $action
+                                                                    ->modalHeading('Create New Property Value')
+                                                                    ->modalSubmitActionLabel('Create Value');
+                                                            })
+                                                            ->helperText($property->description);
+                                                        break;
+
+                                                    case 'checkbox':
+                                                        $schema[] = CheckboxList::make($fieldName)
+                                                            ->label($property->name)
+                                                            ->options($valueOptions)
+                                                            ->descriptions($property->values->pluck('info_url', 'id')->filter()->toArray())
+                                                            ->helperText($property->description)
+                                                            ->rules($property->max_values > 1 ? ["max:{$property->max_values}"] : [])
+                                                            ->createOptionForm([
+                                                                TextInput::make('value')
+                                                                    ->label('Value')
+                                                                    ->required()
+                                                                    ->maxLength(255),
+                                                                TextInput::make('info_url')
+                                                                    ->label('Info URL')
+                                                                    ->url()
+                                                                    ->maxLength(255),
+                                                                TextInput::make('image')
+                                                                    ->label('Image')
+                                                                    ->maxLength(255),
+                                                            ])
+                                                            ->createOptionAction(function ($action) {
+                                                                return $action
+                                                                    ->modalHeading('Create New Property Value')
+                                                                    ->modalSubmitActionLabel('Create Value');
+                                                            });
+                                                        break;
+
+                                                    case 'multiselect':
+                                                        $schema[] = Select::make($fieldName)
+                                                            ->label($property->name)
+                                                            ->options($valueOptions)
+                                                            ->multiple()
+                                                            ->searchable()
+                                                            ->createOptionForm([
+                                                                TextInput::make('value')
+                                                                    ->label('Value')
+                                                                    ->required()
+                                                                    ->maxLength(255),
+                                                                TextInput::make('info_url')
+                                                                    ->label('Info URL')
+                                                                    ->url()
+                                                                    ->maxLength(255),
+                                                                TextInput::make('image')
+                                                                    ->label('Image')
+                                                                    ->maxLength(255),
+                                                            ])
+                                                            ->createOptionAction(function ($action) {
+                                                                return $action
+                                                                    ->modalHeading('Create New Property Value')
+                                                                    ->modalSubmitActionLabel('Create Value');
+                                                            })
+                                                            ->helperText($property->description)
+                                                            ->rules($property->max_values > 1 ? ["max:{$property->max_values}"] : []);
+                                                        break;
+                                                }
                                             }
+                                        }
 
-                                            $fieldType = $property->getFormFieldType();
-                                            $fieldName = "property_values_{$property->id}";
+                                        foreach ($properties as $property) {
+                                            if ($property->isCustomType()) {
+                                                $fieldName = "custom_property_{$property->id}";
 
-                                            switch ($fieldType) {
-                                                case 'radio':
-                                                    $schema[] = Radio::make($fieldName)
-                                                        ->label($property->name)
-                                                        ->options($valueOptions)
-                                                        ->descriptions($property->values->pluck('info_url', 'id')->filter()->toArray())
-                                                        ->helperText($property->description)
-                                                        ->createOptionForm([
-                                                            TextInput::make('value')
-                                                                ->label('Value')
-                                                                ->required()
-                                                                ->maxLength(255),
-                                                            TextInput::make('info_url')
-                                                                ->label('Info URL')
-                                                                ->url()
-                                                                ->maxLength(255),
-                                                            TextInput::make('image')
-                                                                ->label('Image')
-                                                                ->maxLength(255),
-                                                        ])
-                                                        ->createOptionAction(function ($action) {
-                                                            return $action
-                                                                ->modalHeading('Create New Property Value')
-                                                                ->modalSubmitActionLabel('Create Value');
-                                                        });
-                                                    break;
+                                                switch ($property->input_type) {
+                                                    case 'string':
+                                                        if ($property->supportsMultilang()) {
+                                                            $schema[] = InlineTranslatableField::make($fieldName)
+                                                                ->label($property->name)
+                                                                ->type('string')
+                                                                ->maxLength(255)
+                                                                ->helperText($property->description)
+                                                                ->rules(['string', 'max:255'])
+                                                                ->getComponent();
+                                                        } else {
+                                                            $schema[] = TextInput::make($fieldName)
+                                                                ->label($property->name)
+                                                                ->maxLength(255)
+                                                                ->helperText($property->description)
+                                                                ->rules(['string', 'max:255']);
+                                                        }
+                                                        break;
 
-                                                case 'select':
-                                                    $schema[] = Select::make($fieldName)
-                                                        ->label($property->name)
-                                                        ->options($valueOptions)
-                                                        ->searchable()
-                                                        ->createOptionForm([
-                                                            TextInput::make('value')
-                                                                ->label('Value')
-                                                                ->required()
-                                                                ->maxLength(255),
-                                                            TextInput::make('info_url')
-                                                                ->label('Info URL')
-                                                                ->url()
-                                                                ->maxLength(255),
-                                                            TextInput::make('image')
-                                                                ->label('Image')
-                                                                ->maxLength(255),
-                                                        ])
-                                                        ->createOptionAction(function ($action) {
-                                                            return $action
-                                                                ->modalHeading('Create New Property Value')
-                                                                ->modalSubmitActionLabel('Create Value');
-                                                        })
-                                                        ->helperText($property->description);
-                                                    break;
+                                                    case 'text':
+                                                        if ($property->supportsMultilang()) {
+                                                            $schema[] = InlineTranslatableField::make($fieldName)
+                                                                ->label($property->name)
+                                                                ->type('text')
+                                                                ->maxLength(65535)
+                                                                ->helperText($property->description)
+                                                                ->rules(['string', 'max:65535'])
+                                                                ->getComponent();
+                                                        } else {
+                                                            $schema[] = RichEditor::make($fieldName)
+                                                                ->label($property->name)
+                                                                ->helperText($property->description)
+                                                                ->rules(['string', 'max:65535']);
+                                                        }
+                                                        break;
 
-                                                case 'checkbox':
-                                                    $schema[] = CheckboxList::make($fieldName)
-                                                        ->label($property->name)
-                                                        ->options($valueOptions)
-                                                        ->descriptions($property->values->pluck('info_url', 'id')->filter()->toArray())
-                                                        ->helperText($property->description)
-                                                        ->rules($property->max_values > 1 ? ["max:{$property->max_values}"] : [])
-                                                        ->createOptionForm([
-                                                            TextInput::make('value')
-                                                                ->label('Value')
-                                                                ->required()
-                                                                ->maxLength(255),
-                                                            TextInput::make('info_url')
-                                                                ->label('Info URL')
-                                                                ->url()
-                                                                ->maxLength(255),
-                                                            TextInput::make('image')
-                                                                ->label('Image')
-                                                                ->maxLength(255),
-                                                        ])
-                                                        ->createOptionAction(function ($action) {
-                                                            return $action
-                                                                ->modalHeading('Create New Property Value')
-                                                                ->modalSubmitActionLabel('Create Value');
-                                                        });
-                                                    break;
+                                                    case 'integer':
+                                                        $schema[] = TextInput::make($fieldName)
+                                                            ->label($property->name)
+                                                            ->numeric()
+                                                            ->helperText($property->description)
+                                                            ->rules(['integer']);
+                                                        break;
 
-                                                case 'multiselect':
-                                                    $schema[] = Select::make($fieldName)
-                                                        ->label($property->name)
-                                                        ->options($valueOptions)
-                                                        ->multiple()
-                                                        ->searchable()
-                                                        ->createOptionForm([
-                                                            TextInput::make('value')
-                                                                ->label('Value')
-                                                                ->required()
-                                                                ->maxLength(255),
-                                                            TextInput::make('info_url')
-                                                                ->label('Info URL')
-                                                                ->url()
-                                                                ->maxLength(255),
-                                                            TextInput::make('image')
-                                                                ->label('Image')
-                                                                ->maxLength(255),
-                                                        ])
-                                                        ->createOptionAction(function ($action) {
-                                                            return $action
-                                                                ->modalHeading('Create New Property Value')
-                                                                ->modalSubmitActionLabel('Create Value');
-                                                        })
-                                                        ->helperText($property->description)
-                                                        ->rules($property->max_values > 1 ? ["max:{$property->max_values}"] : []);
-                                                    break;
+                                                    case 'decimal':
+                                                        $schema[] = TextInput::make($fieldName)
+                                                            ->label($property->name)
+                                                            ->numeric()
+                                                            ->step(0.01)
+                                                            ->helperText($property->description)
+                                                            ->rules(['numeric']);
+                                                        break;
+
+                                                    case 'date':
+                                                        $schema[] = \Filament\Forms\Components\DatePicker::make($fieldName)
+                                                            ->label($property->name)
+                                                            ->helperText($property->description)
+                                                            ->rules(['date']);
+                                                        break;
+
+                                                    case 'datetime':
+                                                        $schema[] = \Filament\Forms\Components\DateTimePicker::make($fieldName)
+                                                            ->label($property->name)
+                                                            ->helperText($property->description)
+                                                            ->rules(['date']);
+                                                        break;
+
+                                                    case 'file':
+                                                        if ($property->supportsMultilang()) {
+                                                            $schema[] = InlineTranslatableField::make($fieldName)
+                                                                ->label($property->name)
+                                                                ->type('file')
+                                                                ->multiple($property->max_values > 1)
+                                                                ->maxFiles($property->max_values)
+                                                                ->helperText($property->description)
+                                                                ->rules($property->max_values > 1 ? ['array', "max:{$property->max_values}"] : ['file'])
+                                                                ->getComponent();
+                                                        } else {
+                                                            if ($property->max_values > 1) {
+                                                                $schema[] = \Filament\Forms\Components\FileUpload::make($fieldName)
+                                                                    ->label($property->name)
+                                                                    ->multiple()
+                                                                    ->helperText($property->description)
+                                                                    ->rules(['array', "max:{$property->max_values}"]);
+                                                            } else {
+                                                                $schema[] = \Filament\Forms\Components\FileUpload::make($fieldName)
+                                                                    ->label($property->name)
+                                                                    ->helperText($property->description)
+                                                                    ->rules(['file']);
+                                                            }
+                                                        }
+                                                        break;
+                                                }
                                             }
                                         }
 
@@ -470,6 +573,32 @@ class ProductResource extends Resource implements HasShieldPermissions
                 TextColumn::make('gross_weight')
                     ->numeric(3)
                     ->suffix(' kg'),
+
+                // Custom Property Columns
+                TextColumn::make('custom_properties')
+                    ->label('Custom Properties')
+                    ->getStateUsing(function (Product $record) {
+                        $customValues = $record->customPropertyValues()->with('property')->get();
+                        if ($customValues->isEmpty()) {
+                            return null;
+                        }
+
+                        $formattedValues = [];
+                        foreach ($customValues as $customValue) {
+                            $property = $customValue->property;
+                            $value = $customValue->getFormattedValue();
+                            if (! empty($value)) {
+                                $propertyName = is_array($property->name)
+                                    ? ($property->name[app()->getLocale()] ?? reset($property->name))
+                                    : $property->name;
+                                $formattedValues[] = "{$propertyName}: {$value}";
+                            }
+                        }
+
+                        return implode(', ', $formattedValues);
+                    })
+                    ->limit(50)
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->searchable()
             ->filters([
@@ -544,6 +673,26 @@ class ProductResource extends Resource implements HasShieldPermissions
                             });
                         },
                     ),
+
+                // Custom Property Filter
+                SelectFilter::make('custom_property')
+                    ->label('Custom Property')
+                    ->options(function () {
+                        return Property::where('is_active', true)
+                            ->where('type', 'custom')
+                            ->pluck('name', 'id')
+                            ->toArray();
+                    })
+                    ->query(function (Builder $query, array $data) {
+                        $propertyId = $data['value'] ?? null;
+                        if (! $propertyId) {
+                            return;
+                        }
+
+                        return $query->whereHas('customPropertyValues', function ($q) use ($propertyId) {
+                            $q->where('property_id', $propertyId);
+                        });
+                    }),
             ])
             ->actions([
                 ActionGroup::make([
@@ -595,6 +744,7 @@ class ProductResource extends Resource implements HasShieldPermissions
             'name',
             'short_description',
             'description',
+            'custom_property_values',
         ];
     }
 
@@ -603,6 +753,12 @@ class ProductResource extends Resource implements HasShieldPermissions
         return array_filter([
             'Code' => $record->code,
         ]);
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()
+            ->with(['customPropertyValues.property']);
     }
 
     protected static function getPlaceholderImageUrl(): string

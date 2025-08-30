@@ -62,12 +62,44 @@ class PropertyResource extends Resource implements HasShieldPermissions
                             ->helperText(__('eclipse-catalogue::property.help_text.is_global'))
                             ->reactive(),
 
+                        Forms\Components\Select::make('type')
+                            ->label('Property Type')
+                            ->options([
+                                'list' => 'List (Predefined Values)',
+                                'custom' => 'Custom (User Input)',
+                            ])
+                            ->default('list')
+                            ->reactive()
+                            ->required(),
+
+                        Forms\Components\Select::make('input_type')
+                            ->label('Input Type')
+                            ->options([
+                                'string' => 'String (up to 255 chars)',
+                                'text' => 'Text (up to 65k chars)',
+                                'integer' => 'Integer',
+                                'decimal' => 'Decimal',
+                                'date' => 'Date',
+                                'datetime' => 'Date & Time',
+                                'file' => 'File',
+                            ])
+                            ->visible(fn (Forms\Get $get) => $get('type') === 'custom')
+                            ->required(fn (Forms\Get $get) => $get('type') === 'custom')
+                            ->reactive(),
+
+                        Forms\Components\Toggle::make('is_multilang')
+                            ->label('Multilingual')
+                            ->helperText('Enable translation support for string, text, and file inputs')
+                            ->visible(fn (Forms\Get $get) => $get('type') === 'custom' && in_array($get('input_type'), ['string', 'text', 'file']))
+                            ->default(false),
+
                         Forms\Components\TextInput::make('max_values')
                             ->label(__('eclipse-catalogue::property.fields.max_values'))
                             ->numeric()
                             ->minValue(1)
                             ->maxValue(10)
-                            ->helperText(__('eclipse-catalogue::property.help_text.max_values')),
+                            ->helperText(__('eclipse-catalogue::property.help_text.max_values'))
+                            ->visible(fn (Forms\Get $get) => $get('type') === 'list' || $get('input_type') === 'file'),
 
                         Forms\Components\Toggle::make('enable_sorting')
                             ->label(__('eclipse-catalogue::property.fields.enable_sorting'))
@@ -110,6 +142,26 @@ class PropertyResource extends Resource implements HasShieldPermissions
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Type')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'list' => 'success',
+                        'custom' => 'warning',
+                        default => 'gray',
+                    }),
+
+                Tables\Columns\TextColumn::make('input_type')
+                    ->label('Input Type')
+                    ->visible(fn (?Property $record) => $record && $record->isCustomType())
+                    ->badge()
+                    ->color('info'),
+
+                Tables\Columns\IconColumn::make('is_multilang')
+                    ->label('Multilingual')
+                    ->boolean()
+                    ->visible(fn (?Property $record) => $record && $record->isCustomType() && $record->supportsMultilang()),
+
                 Tables\Columns\IconColumn::make('is_global')
                     ->label(__('eclipse-catalogue::property.table.columns.is_global'))
                     ->boolean(),
@@ -145,6 +197,13 @@ class PropertyResource extends Resource implements HasShieldPermissions
                     ->label(__('eclipse-catalogue::property.table.filters.product_type'))
                     ->relationship('productTypes', 'name')
                     ->multiple(),
+
+                Tables\Filters\SelectFilter::make('type')
+                    ->label('Property Type')
+                    ->options([
+                        'list' => 'List',
+                        'custom' => 'Custom',
+                    ]),
 
                 Tables\Filters\TernaryFilter::make('is_global')
                     ->label(__('eclipse-catalogue::property.table.filters.is_global')),

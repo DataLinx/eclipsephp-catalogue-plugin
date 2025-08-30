@@ -30,7 +30,7 @@ class CreateProduct extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         foreach (array_keys($data) as $key) {
-            if (str_starts_with($key, 'property_values_')) {
+            if (str_starts_with($key, 'property_values_') || str_starts_with($key, 'custom_property_')) {
                 unset($data[$key]);
             }
         }
@@ -57,6 +57,28 @@ class CreateProduct extends CreateRecord
 
                     if (! empty($valuesToAttach)) {
                         $this->record->propertyValues()->attach($valuesToAttach);
+                    }
+                }
+            }
+
+            $customPropertyData = [];
+            foreach ($state as $key => $value) {
+                if (is_string($key) && str_starts_with($key, 'custom_property_')) {
+                    $propertyId = str_replace('custom_property_', '', $key);
+                    $customPropertyData[$propertyId] = $value;
+                }
+            }
+
+            foreach ($customPropertyData as $propertyId => $value) {
+                $property = \Eclipse\Catalogue\Models\Property::find($propertyId);
+                if ($property && $property->isCustomType()) {
+                    if ($property->supportsMultilang() && is_array($value)) {
+                        $filteredValue = array_filter($value, fn ($v) => $v !== null && $v !== '');
+                        if (! empty($filteredValue)) {
+                            $this->record->setCustomPropertyValue($property, $value);
+                        }
+                    } elseif ($value !== null && $value !== '') {
+                        $this->record->setCustomPropertyValue($property, $value);
                     }
                 }
             }

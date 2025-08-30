@@ -95,6 +95,18 @@ class Product extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    public function customPropertyValues(): HasMany
+    {
+        return $this->hasMany(CustomPropertyValue::class);
+    }
+
+    public function customProperties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class, 'catalogue_product_has_custom_prop_value', 'product_id', 'property_id')
+            ->withPivot('value')
+            ->withTimestamps();
+    }
+
     public function originCountry(): BelongsTo
     {
         return $this->belongsTo(Country::class, 'origin_country_id', 'id');
@@ -126,6 +138,48 @@ class Product extends Model implements HasMedia
     public function getSortingLabelAttribute(): ?string
     {
         return $this->currentTenantData()?->sorting_label;
+    }
+
+    public function getCustomPropertyValue(Property $property): ?CustomPropertyValue
+    {
+        return $this->customPropertyValues()->where('property_id', $property->id)->first();
+    }
+
+    public function setCustomPropertyValue(Property $property, $value): void
+    {
+        $this->customPropertyValues()->updateOrCreate(
+            ['property_id' => $property->id],
+            ['value' => $value]
+        );
+    }
+
+    public function getCustomPropertyValueFormatted(Property $property): string
+    {
+        $customValue = $this->getCustomPropertyValue($property);
+
+        return $customValue ? $customValue->getFormattedValue() : '';
+    }
+
+    public function getCustomPropertyValuesForSearch(): string
+    {
+        $customValues = $this->customPropertyValues()->with('property')->get();
+        if ($customValues->isEmpty()) {
+            return '';
+        }
+
+        $searchValues = [];
+        foreach ($customValues as $customValue) {
+            $property = $customValue->property;
+            $value = $customValue->getFormattedValue();
+            if (! empty($value)) {
+                $propertyName = is_array($property->name)
+                    ? ($property->name[app()->getLocale()] ?? reset($property->name))
+                    : $property->name;
+                $searchValues[] = "{$propertyName} {$value}";
+            }
+        }
+
+        return implode(' ', $searchValues);
     }
 
     protected static function newFactory(): ProductFactory
@@ -200,6 +254,11 @@ class Product extends Model implements HasMedia
                         'optional' => true,
                     ],
                     [
+                        'name' => 'custom_property_values',
+                        'type' => 'string',
+                        'optional' => true,
+                    ],
+                    [
                         'name' => '__soft_deleted',
                         'type' => 'int32',
                         'optional' => true,
@@ -213,6 +272,7 @@ class Product extends Model implements HasMedia
                     'name_*',
                     'short_description_*',
                     'description_*',
+                    'custom_property_values',
                 ]),
             ],
         ];
