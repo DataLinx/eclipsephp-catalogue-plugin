@@ -6,6 +6,7 @@ use Eclipse\Catalogue\Filament\Resources\PropertyValueResource\Pages;
 use Eclipse\Catalogue\Models\PropertyValue;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Concerns\Translatable;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -109,10 +110,62 @@ class PropertyValueResource extends Resource
                     ->default(fn () => request('property')),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->modalWidth('lg')
-                    ->modalHeading(__('eclipse-catalogue::property-value.modal.edit_heading')),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->modalWidth('lg')
+                        ->modalHeading(__('eclipse-catalogue::property-value.modal.edit_heading')),
+                    Tables\Actions\Action::make('merge')
+                        ->label(__('eclipse-catalogue::property-value.table.actions.merge'))
+                        ->icon('heroicon-o-arrow-uturn-right')
+                        ->modalHeading(__('eclipse-catalogue::property-value.modal.merge_heading'))
+                        ->form(function (PropertyValue $record) {
+                            return [
+                                \Filament\Forms\Components\Placeholder::make('current_value')
+                                    ->label(__('eclipse-catalogue::property-value.modal.merge_from_label'))
+                                    ->content($record->value),
+                                \Filament\Forms\Components\Select::make('target_id')
+                                    ->label(__('eclipse-catalogue::property-value.modal.merge_to_label'))
+                                    ->required()
+                                    ->options(
+                                        PropertyValue::query()
+                                            ->where('property_id', $record->property_id)
+                                            ->whereKeyNot($record->id)
+                                            ->orderBy('value')
+                                            ->pluck('value', 'id')
+                                    ),
+                                \Filament\Forms\Components\Placeholder::make('merge_helper')
+                                    ->label('')
+                                    ->content(__('eclipse-catalogue::property-value.modal.merge_helper'))
+                                    ->columnSpanFull(),
+                            ];
+                        })
+                        ->modalSubmitActionLabel(__('eclipse-catalogue::property-value.modal.merge_submit_label'))
+                        ->modalCancelActionLabel(__('eclipse-catalogue::property-value.modal.cancel_label'))
+                        ->requiresConfirmation()
+                        ->modalIcon('heroicon-o-question-mark-circle')
+                        ->modalHeading(__('eclipse-catalogue::property-value.modal.merge_confirm_title'))
+                        ->modalDescription(__('eclipse-catalogue::property-value.modal.merge_confirm_body'))
+                        ->action(function (PropertyValue $record, array $data) {
+                            try {
+                                $result = $record->mergeInto((int) $data['target_id']);
+
+                                Notification::make()
+                                    ->title(__('eclipse-catalogue::property-value.messages.merged_title'))
+                                    ->body(__('eclipse-catalogue::property-value.messages.merged_body', ['affected' => $result['affected_products']]))
+                                    ->success()
+                                    ->send();
+                            } catch (\Throwable $e) {
+                                \Log::error('Merge property values failed', ['exception' => $e]);
+                                Notification::make()
+                                    ->title(__('eclipse-catalogue::property-value.messages.merged_error_title'))
+                                    ->body(__('eclipse-catalogue::property-value.messages.merged_error_body'))
+                                    ->danger()
+                                    ->send();
+                                throw $e;
+                            }
+                        }),
+                    Tables\Actions\DeleteAction::make(),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
