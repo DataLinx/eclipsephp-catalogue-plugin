@@ -2,6 +2,7 @@
 
 namespace Eclipse\Catalogue\Filament\Resources\PropertyValueResource\Pages;
 
+use Eclipse\Catalogue\Enums\PropertyType;
 use Eclipse\Catalogue\Filament\Resources\PropertyResource;
 use Eclipse\Catalogue\Filament\Resources\PropertyValueResource;
 use Eclipse\Catalogue\Models\Property;
@@ -26,6 +27,10 @@ class ListPropertyValues extends ListRecords
 
         if (request()->has('property')) {
             $this->property = Property::find(request('property'));
+
+            if ($this->property && $this->property->type === PropertyType::CUSTOM->value) {
+                abort(404);
+            }
         }
     }
 

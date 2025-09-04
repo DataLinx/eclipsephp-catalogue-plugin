@@ -50,15 +50,30 @@ class EditProduct extends EditRecord
                 ->get();
 
             foreach ($properties as $property) {
-                $fieldName = "property_values_{$property->id}";
-                $selectedValues = $this->record->propertyValues()
-                    ->where('pim_property_value.property_id', $property->id)
-                    ->pluck('pim_property_value.id')
-                    ->toArray();
+                if ($property->isListType()) {
+                    $fieldName = "property_values_{$property->id}";
+                    $selectedValues = $this->record->propertyValues()
+                        ->where('pim_property_value.property_id', $property->id)
+                        ->pluck('pim_property_value.id')
+                        ->toArray();
 
-                $data[$fieldName] = ($property->max_values === 1)
-                    ? ($selectedValues[0] ?? null)
-                    : $selectedValues;
+                    $data[$fieldName] = ($property->max_values === 1)
+                        ? ($selectedValues[0] ?? null)
+                        : $selectedValues;
+                } else {
+                    $fieldName = "custom_property_{$property->id}";
+                    $customValue = $this->record->getCustomPropertyValue($property);
+                    if ($customValue) {
+                        $data[$fieldName] = $customValue->value;
+                    } else {
+                        if ($property->supportsMultilang()) {
+                            $locales = $this->getAvailableLocales();
+                            $data[$fieldName] = array_fill_keys($locales, '');
+                        } else {
+                            $data[$fieldName] = null;
+                        }
+                    }
+                }
             }
         }
 
@@ -108,7 +123,7 @@ class EditProduct extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         foreach (array_keys($data) as $key) {
-            if (str_starts_with($key, 'property_values_')) {
+            if (str_starts_with($key, 'property_values_') || str_starts_with($key, 'custom_property_')) {
                 unset($data[$key]);
             }
         }
@@ -145,6 +160,36 @@ class EditProduct extends EditRecord
 
                     if (! empty($valuesToAttach)) {
                         $this->record->propertyValues()->attach($valuesToAttach);
+                    }
+                }
+            }
+
+            $customPropertyData = [];
+            foreach ($state as $key => $value) {
+                if (is_string($key) && str_starts_with($key, 'custom_property_')) {
+                    $propertyId = str_replace('custom_property_', '', $key);
+                    $customPropertyData[$propertyId] = $value;
+                }
+            }
+
+            foreach ($customPropertyData as $propertyId => $value) {
+                $property = Property::find($propertyId);
+                if ($property && $property->isCustomType()) {
+                    if ($property->supportsMultilang() && is_array($value)) {
+                        $filteredValue = array_filter($value, fn ($v) => $v !== null && $v !== '');
+                        if (! empty($filteredValue)) {
+                            $this->record->setCustomPropertyValue($property, $value);
+                        } else {
+                            $this->record->customPropertyValues()
+                                ->where('property_id', $propertyId)
+                                ->delete();
+                        }
+                    } elseif ($value !== null && $value !== '') {
+                        $this->record->setCustomPropertyValue($property, $value);
+                    } else {
+                        $this->record->customPropertyValues()
+                            ->where('property_id', $propertyId)
+                            ->delete();
                     }
                 }
             }
@@ -227,6 +272,18 @@ class EditProduct extends EditRecord
     protected function getRecordUrl(Model $record): string
     {
         return static::getResource()::getUrl('edit', ['record' => $record]);
+    }
+
+    /**
+     * Get available locales for the application.
+     */
+    protected function getAvailableLocales(): array
+    {
+        if (class_exists(\Eclipse\Core\Models\Locale::class)) {
+            return \Eclipse\Core\Models\Locale::getAvailableLocales()->pluck('id')->toArray();
+        }
+
+        return ['en'];
     }
 
     public function reorderImages(string $statePath, array $uuids): void
