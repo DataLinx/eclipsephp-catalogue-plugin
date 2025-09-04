@@ -1,0 +1,22 @@
+<div>
+    <span class="color-swatch color-swatch-lg{{ !empty($isMulti) ? ' multi' : '' }}" style="{{ $style ?? '' }}"></span>
+</div>
+
+<style>
+    .color-swatch {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        outline: 1px solid rgba(0, 0, 0, .15)
+    }
+
+    .color-swatch-lg {
+        width: 64px;
+        height: 64px
+    }
+
+    .color-swatch.multi {
+        background-image: repeating-linear-gradient(45deg, #000 0 10px, #fff 10px 20px)
+    }
+</style>

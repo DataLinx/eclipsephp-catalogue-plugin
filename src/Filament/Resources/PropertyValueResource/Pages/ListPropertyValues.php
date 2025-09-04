@@ -2,6 +2,7 @@
 
 namespace Eclipse\Catalogue\Filament\Resources\PropertyValueResource\Pages;
 
+use Eclipse\Catalogue\Enums\PropertyType;
 use Eclipse\Catalogue\Filament\Resources\PropertyResource;
 use Eclipse\Catalogue\Filament\Resources\PropertyValueResource;
 use Eclipse\Catalogue\Models\Property;
@@ -26,6 +27,10 @@ class ListPropertyValues extends ListRecords
 
         if (request()->has('property')) {
             $this->property = Property::find(request('property'));
+
+            if ($this->property && $this->property->type === PropertyType::CUSTOM->value) {
+                abort(404);
+            }
         }
     }
 
@@ -36,8 +41,8 @@ class ListPropertyValues extends ListRecords
             Actions\CreateAction::make()
                 ->modalWidth('lg')
                 ->modalHeading(__('eclipse-catalogue::property-value.modal.create_heading'))
-                ->form(fn (\Filament\Forms\Form $form) => $form
-                    ->schema([
+                ->form(function (\Filament\Forms\Form $form) {
+                    $schema = [
                         \Filament\Forms\Components\TextInput::make('value')
                             ->label(__('eclipse-catalogue::property-value.fields.value'))
                             ->required()
@@ -56,9 +61,14 @@ class ListPropertyValues extends ListRecords
                             ->nullable()
                             ->disk('public')
                             ->directory('property-values'),
-                    ])
-                    ->columns(1)
-                )
+                    ];
+
+                    if ($this->property && $this->property->type === PropertyType::COLOR->value) {
+                        $schema = array_merge($schema, PropertyValueResource::buildColorGroupSchema());
+                    }
+
+                    return $form->schema($schema)->columns(1);
+                })
                 ->mutateFormDataUsing(function (array $data): array {
                     // Set the property_id from the request if available
                     if (request()->has('property')) {

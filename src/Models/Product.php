@@ -2,6 +2,7 @@
 
 namespace Eclipse\Catalogue\Models;
 
+use Eclipse\Catalogue\Enums\PropertyInputType;
 use Eclipse\Catalogue\Factories\ProductFactory;
 use Eclipse\Catalogue\Traits\HasTenantScopedData;
 use Eclipse\Common\Foundation\Models\IsSearchable;
@@ -95,6 +96,18 @@ class Product extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    public function customPropertyValues(): HasMany
+    {
+        return $this->hasMany(CustomPropertyValue::class);
+    }
+
+    public function customProperties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class, 'catalogue_product_has_custom_prop_value', 'product_id', 'property_id')
+            ->withPivot('value')
+            ->withTimestamps();
+    }
+
     public function originCountry(): BelongsTo
     {
         return $this->belongsTo(Country::class, 'origin_country_id', 'id');
@@ -134,6 +147,48 @@ class Product extends Model implements HasMedia
         return $this->currentTenantData()?->sorting_label;
     }
 
+    public function getCustomPropertyValue(Property $property): ?CustomPropertyValue
+    {
+        return $this->customPropertyValues()->where('property_id', $property->id)->first();
+    }
+
+    public function setCustomPropertyValue(Property $property, $value): void
+    {
+        $this->customPropertyValues()->updateOrCreate(
+            ['property_id' => $property->id],
+            ['value' => $value]
+        );
+    }
+
+    public function getCustomPropertyValueFormatted(Property $property): string
+    {
+        $customValue = $this->getCustomPropertyValue($property);
+
+        return $customValue ? $customValue->getFormattedValue() : '';
+    }
+
+    public function getCustomPropertyValuesForSearch(): string
+    {
+        $customValues = $this->customPropertyValues()->with('property')->get();
+        if ($customValues->isEmpty()) {
+            return '';
+        }
+
+        $searchValues = [];
+        foreach ($customValues as $customValue) {
+            $property = $customValue->property;
+            $value = $customValue->getFormattedValue();
+            if (! empty($value)) {
+                $propertyName = $property->internal_name ?: (is_array($property->name)
+                    ? ($property->name[app()->getLocale()] ?? reset($property->name))
+                    : $property->name);
+                $searchValues[] = "{$propertyName} {$value}";
+            }
+        }
+
+        return implode(' ', $searchValues);
+    }
+
     protected static function newFactory(): ProductFactory
     {
         return ProductFactory::new();
@@ -165,6 +220,43 @@ class Product extends Model implements HasMedia
     {
         return $this->getMedia('images')->firstWhere('custom_properties.is_cover', true)
             ?? $this->getFirstMedia('images');
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     */
+    public function toSearchableArray(): array
+    {
+        $data = $this->createSearchableArray();
+
+        $customValues = $this->customPropertyValues()->with('property')->get();
+
+        foreach ($customValues as $customValue) {
+            $property = $customValue->property;
+
+            if (! $property || ! $property->isCustomType() || ! in_array($property->input_type, [PropertyInputType::STRING->value, PropertyInputType::TEXT->value])) {
+                continue;
+            }
+
+            $value = $customValue->getFormattedValue();
+            if (empty($value)) {
+                continue;
+            }
+
+            $codeKey = $property->code ?: (string) $property->id;
+
+            if ($property->supportsMultilang() && is_array($customValue->value)) {
+                foreach ($customValue->value as $localeId => $localeValue) {
+                    if (! empty($localeValue)) {
+                        $data["cprop_{$codeKey}_{$localeId}"] = strip_tags($localeValue);
+                    }
+                }
+            } else {
+                $data["cprop_{$codeKey}"] = strip_tags($value);
+            }
+        }
+
+        return $data;
     }
 
     public static function getTypesenseSettings(): array
@@ -206,6 +298,11 @@ class Product extends Model implements HasMedia
                         'optional' => true,
                     ],
                     [
+                        'name' => 'cprop_.*',
+                        'type' => 'string',
+                        'optional' => true,
+                    ],
+                    [
                         'name' => '__soft_deleted',
                         'type' => 'int32',
                         'optional' => true,
@@ -219,6 +316,7 @@ class Product extends Model implements HasMedia
                     'name_*',
                     'short_description_*',
                     'description_*',
+                    'cprop_*',
                 ]),
             ],
         ];
