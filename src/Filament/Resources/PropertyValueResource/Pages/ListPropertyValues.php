@@ -2,6 +2,7 @@
 
 namespace Eclipse\Catalogue\Filament\Resources\PropertyValueResource\Pages;
 
+use Eclipse\Catalogue\Enums\PropertyType;
 use Eclipse\Catalogue\Filament\Resources\PropertyResource;
 use Eclipse\Catalogue\Filament\Resources\PropertyValueResource;
 use Eclipse\Catalogue\Models\Property;
@@ -26,18 +27,22 @@ class ListPropertyValues extends ListRecords
 
         if (request()->has('property')) {
             $this->property = Property::find(request('property'));
+
+            if ($this->property && $this->property->type === PropertyType::CUSTOM->value) {
+                abort(404);
+            }
         }
     }
 
     protected function getHeaderActions(): array
     {
-        return [
+        $actions = [
             LocaleSwitcher::make(),
             Actions\CreateAction::make()
                 ->modalWidth('lg')
                 ->modalHeading(__('eclipse-catalogue::property-value.modal.create_heading'))
-                ->form(fn (\Filament\Forms\Form $form) => $form
-                    ->schema([
+                ->form(function (\Filament\Forms\Form $form) {
+                    $schema = [
                         \Filament\Forms\Components\TextInput::make('value')
                             ->label(__('eclipse-catalogue::property-value.fields.value'))
                             ->required()
@@ -56,9 +61,14 @@ class ListPropertyValues extends ListRecords
                             ->nullable()
                             ->disk('public')
                             ->directory('property-values'),
-                    ])
-                    ->columns(1)
-                )
+                    ];
+
+                    if ($this->property && $this->property->type === PropertyType::COLOR->value) {
+                        $schema = array_merge($schema, PropertyValueResource::buildColorGroupSchema());
+                    }
+
+                    return $form->schema($schema)->columns(1);
+                })
                 ->mutateFormDataUsing(function (array $data): array {
                     // Set the property_id from the request if available
                     if (request()->has('property')) {
@@ -68,6 +78,28 @@ class ListPropertyValues extends ListRecords
                     return $data;
                 }),
         ];
+
+        if ($this->property && $this->property->type === PropertyType::COLOR->value) {
+            $actions[] = Actions\Action::make('import')
+                ->label(__('eclipse-catalogue::property-value.actions.import'))
+                ->icon('heroicon-o-arrow-up-tray')
+                ->modalWidth('lg')
+                ->modalHeading(__('eclipse-catalogue::property-value.modal.import_heading'))
+                ->form([
+                    \Filament\Forms\Components\FileUpload::make('file')
+                        ->label(__('eclipse-catalogue::property-value.fields.import_file'))
+                        ->helperText(__('eclipse-catalogue::property-value.help_text.import_file'))
+                        ->acceptedFileTypes(['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'])
+                        ->required()
+                        ->disk('local')
+                        ->directory('temp/color-imports'),
+                ])
+                ->action(function (array $data): void {
+                    \Eclipse\Catalogue\Jobs\ImportColorValues::dispatch($data['file'], $this->property->id);
+                });
+        }
+
+        return $actions;
     }
 
     public function getTitle(): string

@@ -41,6 +41,7 @@ class PropertySeeder extends Seeder
             'description' => ['en' => 'Product color'],
             'is_active' => true,
             'is_global' => true,
+            'type' => \Eclipse\Catalogue\Enums\PropertyType::COLOR->value,
             'max_values' => 3, // Allow multiple colors
             'enable_sorting' => true,
             'is_filter' => true,
@@ -48,12 +49,27 @@ class PropertySeeder extends Seeder
 
         // Create color values
         $colors = ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Purple', 'Orange'];
+        $hexMap = [
+            'Red' => '#ff0000',
+            'Blue' => '#0000ff',
+            'Green' => '#00ff00',
+            'Black' => '#000000',
+            'White' => '#ffffff',
+            'Yellow' => '#ffff00',
+            'Purple' => '#800080',
+            'Orange' => '#ffa500',
+        ];
         foreach ($colors as $index => $color) {
-            PropertyValue::create([
+            $pv = PropertyValue::create([
                 'property_id' => $colorProperty->id,
                 'value' => ['en' => $color],
                 'sort' => $index * 10,
             ]);
+            $hex = $hexMap[$color] ?? null;
+            if ($hex) {
+                $pv->color = json_encode(['type' => 's', 'color' => $hex]);
+                $pv->save();
+            }
         }
 
         // Create Size property (for clothing type only)
