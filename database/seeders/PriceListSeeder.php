@@ -14,42 +14,85 @@ class PriceListSeeder extends Seeder
      */
     public function run(): void
     {
-        // Ensure we have at least one currency
-        if (Currency::count() === 0) {
+        // Ensure currencies exist
+        if (! Currency::where('id', 'EUR')->exists()) {
             Currency::create(['id' => 'EUR', 'name' => 'Euro', 'is_active' => true]);
         }
+        if (! Currency::where('id', 'USD')->exists()) {
+            Currency::create(['id' => 'USD', 'name' => 'US Dollar', 'is_active' => true]);
+        }
 
-        // Create price lists using factory
-        $priceLists = PriceList::factory()
-            ->count(3)
-            ->create();
+        // Desired price lists
+        $definitions = [
+            [
+                'name' => 'Wholesale / Veleprodajni cenik',
+                'code' => 'VPC',
+                'currency_id' => 'EUR',
+                'tax_included' => false,
+                'is_default' => false,
+                'is_default_purchase' => false,
+            ],
+            [
+                'name' => 'Retail / Maloprodajni cenik',
+                'code' => 'MPC',
+                'currency_id' => 'EUR',
+                'tax_included' => true,
+                'is_default' => true, // default selling
+                'is_default_purchase' => false,
+            ],
+            [
+                'name' => 'Purchase / Nabavni cenik',
+                'code' => 'NC',
+                'currency_id' => 'USD',
+                'tax_included' => false,
+                'is_default' => false,
+                'is_default_purchase' => true, // default purchase
+            ],
+        ];
 
-        // Create price list data for each price list
-        foreach ($priceLists as $index => $priceList) {
-            // Create data for all tenants if tenancy is enabled
-            $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-            $tenantModel = config('eclipse-catalogue.tenancy.model');
+        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+        $tenantModel = config('eclipse-catalogue.tenancy.model');
+        $tenants = collect();
+        if ($tenantFK && $tenantModel && class_exists($tenantModel)) {
+            $tenants = $tenantModel::all();
+        }
 
-            if ($tenantFK && $tenantModel && class_exists($tenantModel)) {
-                $tenants = $tenantModel::all();
+        foreach ($definitions as $def) {
+            $priceList = PriceList::updateOrCreate(
+                ['code' => $def['code']],
+                [
+                    'name' => $def['name'],
+                    'currency_id' => $def['currency_id'],
+                    'tax_included' => $def['tax_included'],
+                ]
+            );
 
+            // Ensure per-tenant data
+            if ($tenants->isNotEmpty()) {
                 foreach ($tenants as $tenant) {
-                    PriceListData::factory()->create([
-                        'price_list_id' => $priceList->id,
-                        $tenantFK => $tenant->id,
-                        'is_active' => true,
-                        'is_default' => $index === 0, // First price list is default selling
-                        'is_default_purchase' => false,
-                    ]);
+                    PriceListData::updateOrCreate(
+                        [
+                            'price_list_id' => $priceList->id,
+                            $tenantFK => $tenant->id,
+                        ],
+                        [
+                            'is_active' => true,
+                            'is_default' => $def['is_default'],
+                            'is_default_purchase' => $def['is_default_purchase'],
+                        ]
+                    );
                 }
             } else {
-                // No tenancy - create single record
-                PriceListData::factory()->create([
-                    'price_list_id' => $priceList->id,
-                    'is_active' => true,
-                    'is_default' => $index === 0, // First price list is default selling
-                    'is_default_purchase' => false,
-                ]);
+                PriceListData::updateOrCreate(
+                    [
+                        'price_list_id' => $priceList->id,
+                    ],
+                    [
+                        'is_active' => true,
+                        'is_default' => $def['is_default'],
+                        'is_default_purchase' => $def['is_default_purchase'],
+                    ]
+                );
             }
         }
     }

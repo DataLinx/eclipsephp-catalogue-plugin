@@ -4,10 +4,14 @@ namespace Eclipse\Catalogue\Seeders;
 
 use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Group;
+use Eclipse\Catalogue\Models\PriceList;
 use Eclipse\Catalogue\Models\Product;
+use Eclipse\Catalogue\Models\Product\Price as ProductPrice;
 use Eclipse\Catalogue\Models\ProductData;
 use Eclipse\Catalogue\Models\ProductStatus;
 use Eclipse\Catalogue\Models\ProductType;
+use Eclipse\Catalogue\Models\Property;
+use Eclipse\Catalogue\Models\PropertyValue;
 use Exception;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Http;
@@ -38,6 +42,9 @@ class ProductSeeder extends Seeder
         $products = Product::query()->latest('id')->take(100)->get();
 
         foreach ($products as $index => $product) {
+            // Assign product prices for all price lists
+            $this->assignRandomPrices($product);
+
             if ($tenantFK && $tenantModel && class_exists($tenantModel)) {
                 $tenants = $tenantModel::all();
                 foreach ($tenants as $tenant) {
@@ -57,6 +64,9 @@ class ProductSeeder extends Seeder
 
                     // Assign random product status for this tenant
                     $this->assignRandomProductStatus($productData, $tenant->id);
+
+                    // Attach random unit of measure (list property) and custom property values
+                    $this->attachRandomUnitAndCustomProps($product);
 
                     // Get groups for this specific tenant
                     $tenantGroups = Group::where($tenantFK, $tenant->id)->get();
@@ -78,6 +88,9 @@ class ProductSeeder extends Seeder
 
                 // Assign random product status for non-tenant scenario
                 $this->assignRandomProductStatus($productData, null);
+
+                // Attach random unit of measure (list property) and custom property values
+                $this->attachRandomUnitAndCustomProps($product);
 
                 // For non-tenant scenarios, use all groups
                 $groups = Group::all();
@@ -196,6 +209,86 @@ class ProductSeeder extends Seeder
                 $randomStatus = $availableStatuses->random();
                 $productData->update(['product_status_id' => $randomStatus->id]);
             }
+        }
+    }
+
+    /**
+     * Create random current prices for all price lists for a product.
+     */
+    private function assignRandomPrices(Product $product): void
+    {
+        $priceLists = PriceList::all();
+        if ($priceLists->isEmpty()) {
+            return;
+        }
+
+        foreach ($priceLists as $pl) {
+            // Generate a base retail price between 10 and 500 (EUR/USD agnostic)
+            $baseRetail = rand(1000, 50000) / 100; // 10.00 - 500.00
+
+            if ($pl->code === 'MPC') {
+                $priceValue = $baseRetail;
+            } elseif ($pl->code === 'VPC') {
+                // Wholesale discount 10% - 30%
+                $discountFactor = rand(70, 90) / 100; // 0.70 - 0.90
+                $priceValue = round($baseRetail * $discountFactor, 2);
+            } elseif ($pl->code === 'NC') {
+                // Purchase price: slightly lower than wholesale or independent band
+                $priceValue = round(max(1, $baseRetail * rand(60, 80) / 100), 2);
+            } else {
+                $priceValue = $baseRetail;
+            }
+
+            ProductPrice::updateOrCreate(
+                [
+                    'product_id' => $product->id,
+                    'price_list_id' => $pl->id,
+                    'valid_from' => now()->toDateString(),
+                ],
+                [
+                    'price' => $priceValue,
+                    'tax_included' => (bool) $pl->tax_included,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Attach unit of measure (list property) and custom property values.
+     */
+    private function attachRandomUnitAndCustomProps(Product $product): void
+    {
+        // Unit of measure via list property
+        $uomProperty = Property::where('code', 'unit_of_measure')->first();
+        if ($uomProperty) {
+            $values = PropertyValue::where('property_id', $uomProperty->id)->get();
+            if ($values->isNotEmpty()) {
+                $product->propertyValues()->syncWithoutDetaching([$values->random()->id]);
+            }
+        }
+
+        // Custom properties
+        $materialDetails = Property::where('code', 'material_details')->first();
+        if ($materialDetails) {
+            $product->setCustomPropertyValue($materialDetails, [
+                'en' => 'Made from premium materials',
+                'sl' => 'Izdelano iz kakovostnih materialov',
+            ]);
+        }
+
+        $skuNotes = Property::where('code', 'sku_notes')->first();
+        if ($skuNotes) {
+            $product->setCustomPropertyValue($skuNotes, 'Handle with care');
+        }
+
+        $releaseDate = Property::where('code', 'release_date')->first();
+        if ($releaseDate) {
+            $product->setCustomPropertyValue($releaseDate, now()->subDays(rand(0, 365))->toDateString());
+        }
+
+        $dimensions = Property::where('code', 'dimensions')->first();
+        if ($dimensions) {
+            $product->setCustomPropertyValue($dimensions, rand(10, 200) / 10); // 1.0 - 20.0
         }
     }
 }
