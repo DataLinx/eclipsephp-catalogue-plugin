@@ -18,8 +18,8 @@ use Eclipse\Catalogue\Traits\HandlesTenantData;
 use Eclipse\Catalogue\Traits\HasTenantFields;
 use Eclipse\Common\Foundation\Helpers\MediaHelper;
 use Eclipse\World\Models\Country;
-use Filament\Facades\Filament;
 use Eclipse\World\Models\TariffCode;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
@@ -265,7 +265,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                                                 'name',
                                                 function ($query) {
                                                     $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                                                    $currentTenant = \Filament\Facades\Filament::getTenant();
+                                                    $currentTenant = Filament::getTenant();
 
                                                     if ($tenantFK && $currentTenant) {
                                                         return $query->whereHas('productTypeData', function ($q) use ($tenantFK, $currentTenant) {
@@ -604,7 +604,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->badge()
                     ->getStateUsing(function (Product $record) {
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
 
                         $status = null;
 
@@ -625,7 +625,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     })
                     ->color(function (Product $record) {
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
 
                         $status = null;
                         if ($record->relationLoaded('productData')) {
@@ -641,7 +641,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     })
                     ->extraAttributes(function (Product $record) {
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
 
                         $status = null;
                         if ($record->relationLoaded('productData')) {
@@ -679,7 +679,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->limit(3)
                     ->toggleable()
                     ->getStateUsing(function (Product $record) {
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key', 'site_id');
 
                         if ($currentTenant) {
@@ -751,7 +751,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->options(function () {
                         $query = ProductStatus::query();
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
                         if ($tenantFK && $currentTenant) {
                             $query->where($tenantFK, $currentTenant->id);
                         }
@@ -768,7 +768,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                             return;
                         }
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
                         $query->whereHas('productData', function ($q) use ($selected, $tenantFK, $currentTenant) {
                             if ($tenantFK && $currentTenant) {
                                 $q->where($tenantFK, $currentTenant->id);
@@ -870,7 +870,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                         },
                         false: function (Builder $query) {
                             $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                            $currentTenant = \Filament\Facades\Filament::getTenant();
+                            $currentTenant = Filament::getTenant();
 
                             return $query->whereHas('productData', function ($q) use ($tenantFK, $currentTenant) {
                                 $q->where('is_active', false);
@@ -979,7 +979,7 @@ class ProductResource extends Resource implements HasShieldPermissions
             ]);
 
         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-        $currentTenant = \Filament\Facades\Filament::getTenant();
+        $currentTenant = Filament::getTenant();
 
         if ($tenantFK && $currentTenant) {
             $query->with(['productData' => function ($q) use ($tenantFK, $currentTenant) {
