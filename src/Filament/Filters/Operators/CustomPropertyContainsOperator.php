@@ -1,0 +1,82 @@
+<?php
+
+namespace Eclipse\Catalogue\Filament\Filters\Operators;
+
+use Filament\Forms\Components\Component;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Filters\QueryBuilder\Constraints\Operators\Operator;
+use Illuminate\Database\Eloquent\Builder;
+
+class CustomPropertyContainsOperator extends Operator
+{
+    /**
+     * Get the name of the operator.
+     */
+    public function getName(): string
+    {
+        return 'contains';
+    }
+
+    /**
+     * Get the label of the operator.
+     */
+    public function getLabel(): string
+    {
+        return __(
+            $this->isInverse() ?
+                'filament-tables::filters/query-builder.operators.text.contains.label.inverse' :
+                'filament-tables::filters/query-builder.operators.text.contains.label.direct',
+        );
+    }
+
+    /**
+     * Get the summary of the operator.
+     */
+    public function getSummary(): string
+    {
+        return __(
+            $this->isInverse() ?
+                'filament-tables::filters/query-builder.operators.text.contains.summary.inverse' :
+                'filament-tables::filters/query-builder.operators.text.contains.summary.direct',
+            [
+                'attribute' => $this->getConstraint()->getAttributeLabel(),
+                'text' => $this->getSettings()['text'],
+            ],
+        );
+    }
+
+    /**
+     * Get the form schema of the operator.
+     *
+     * @return array<Component>
+     */
+    public function getFormSchema(): array
+    {
+        return [
+            TextInput::make('text')
+                ->label(__('filament-tables::filters/query-builder.operators.text.form.text.label'))
+                ->required()
+                ->columnSpanFull(),
+        ];
+    }
+
+    /**
+     * Apply the operator to the query.
+     */
+    public function apply(Builder $query, string $qualifiedColumn): Builder
+    {
+        $text = trim($this->getSettings()['text']);
+
+        if (empty($text)) {
+            return $query;
+        }
+
+        $constraintName = $this->getConstraint()->getName();
+        $propertyId = (int) str_replace('custom_property_', '', $constraintName);
+
+        return $query->whereHas('customPropertyValues', function ($q) use ($propertyId, $text) {
+            $q->where('property_id', $propertyId)
+                ->whereRaw('REGEXP_REPLACE(value, "<[^>]*>", "") LIKE ?', ["%{$text}%"]);
+        });
+    }
+}

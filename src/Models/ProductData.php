@@ -17,6 +17,7 @@ class ProductData extends Model
     protected $fillable = [
         'product_id',
         'category_id',
+        'product_status_id',
         'sorting_label',
         'is_active',
         'available_from_date',
@@ -45,6 +46,12 @@ class ProductData extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /** @return BelongsTo<ProductStatus> */
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(ProductStatus::class, 'product_status_id');
     }
 
     /** @return BelongsTo<\Eclipse\Core\Models\Site, self> */

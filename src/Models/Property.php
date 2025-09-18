@@ -2,6 +2,8 @@
 
 namespace Eclipse\Catalogue\Models;
 
+use Eclipse\Catalogue\Enums\PropertyInputType;
+use Eclipse\Catalogue\Enums\PropertyType;
 use Eclipse\Catalogue\Factories\PropertyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +28,9 @@ class Property extends Model
         'max_values',
         'enable_sorting',
         'is_filter',
+        'type',
+        'input_type',
+        'is_multilang',
     ];
 
     public array $translatable = [
@@ -41,17 +46,20 @@ class Property extends Model
         'enable_sorting' => 'boolean',
         'is_filter' => 'boolean',
         'max_values' => 'integer',
+        'is_multilang' => 'boolean',
     ];
 
     protected static function booted(): void
     {
         static::creating(function (Property $property) {
+            $property->validateTypeAndInputType();
             if ($property->code) {
                 $property->code = strtolower($property->code);
             }
         });
 
         static::updating(function (Property $property) {
+            $property->validateTypeAndInputType();
             if ($property->isDirty('code') && $property->code) {
                 $property->code = strtolower($property->code);
             }
@@ -77,6 +85,32 @@ class Property extends Model
                 $property->productTypes()->detach();
             }
         });
+    }
+
+    protected function validateTypeAndInputType(): void
+    {
+        if ($this->type && ! empty(trim($this->type))) {
+            $validTypes = [PropertyType::LIST->value, PropertyType::CUSTOM->value];
+            if (! in_array($this->type, $validTypes)) {
+                throw new \InvalidArgumentException("Invalid type '{$this->type}'. Must be one of: ".implode(', ', $validTypes));
+            }
+        }
+
+        if ($this->type === PropertyType::CUSTOM->value && $this->input_type !== null) {
+            $validInputTypes = [
+                PropertyInputType::STRING->value,
+                PropertyInputType::TEXT->value,
+                PropertyInputType::INTEGER->value,
+                PropertyInputType::DECIMAL->value,
+                PropertyInputType::DATE->value,
+                PropertyInputType::DATETIME->value,
+                PropertyInputType::FILE->value,
+            ];
+
+            if (! in_array($this->input_type, $validInputTypes)) {
+                throw new \InvalidArgumentException("Invalid input_type '{$this->input_type}'. Must be one of: ".implode(', ', $validInputTypes));
+            }
+        }
     }
 
     public function values(): HasMany
@@ -105,6 +139,63 @@ class Property extends Model
             }
             $this->productTypes()->attach($attachData);
         }
+    }
+
+    public function isCustomType(): bool
+    {
+        return $this->type === PropertyType::CUSTOM->value;
+    }
+
+    public function isListType(): bool
+    {
+        return $this->type === PropertyType::LIST->value;
+    }
+
+    public function supportsMultilang(): bool
+    {
+        return $this->is_multilang && in_array($this->input_type, [
+            PropertyInputType::STRING->value,
+            PropertyInputType::TEXT->value,
+            PropertyInputType::FILE->value,
+        ]);
+    }
+
+    public function getInputValidationRules(): array
+    {
+        if (! $this->isCustomType()) {
+            return [];
+        }
+
+        $rules = [];
+
+        switch ($this->input_type) {
+            case PropertyInputType::STRING->value:
+                $rules[] = 'string|max:255';
+                break;
+            case PropertyInputType::TEXT->value:
+                $rules[] = 'string|max:65535';
+                break;
+            case PropertyInputType::INTEGER->value:
+                $rules[] = 'integer';
+                break;
+            case PropertyInputType::DECIMAL->value:
+                $rules[] = 'numeric';
+                break;
+            case PropertyInputType::DATE->value:
+                $rules[] = 'date';
+                break;
+            case PropertyInputType::DATETIME->value:
+                $rules[] = 'date';
+                break;
+            case PropertyInputType::FILE->value:
+                $rules[] = 'file';
+                if ($this->max_values > 1) {
+                    $rules[] = 'array';
+                }
+                break;
+        }
+
+        return $rules;
     }
 
     public function getFormFieldType(): string

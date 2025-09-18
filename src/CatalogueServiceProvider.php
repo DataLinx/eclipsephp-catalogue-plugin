@@ -4,6 +4,8 @@ namespace Eclipse\Catalogue;
 
 use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Product;
+use Filament\Support\Assets\Css;
+use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Config;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -46,5 +48,9 @@ class CatalogueServiceProvider extends PackageServiceProvider
         if (class_exists(\Livewire\Livewire::class)) {
             \Livewire\Livewire::component('eclipse-catalogue::tenant-switcher', \Eclipse\Catalogue\Livewire\TenantSwitcher::class);
         }
+
+        FilamentAsset::register([
+            Css::make('eclipse-catalogue', __DIR__.'/../resources/css/catalogue.css'),
+        ], package: static::$name);
     }
 }

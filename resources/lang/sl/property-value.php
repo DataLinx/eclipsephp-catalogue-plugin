@@ -42,18 +42,31 @@ return [
         'actions' => [
             'edit' => 'Uredi',
             'delete' => 'Izbriši',
+            'merge' => 'Združi…',
         ],
     ],
 
     'modal' => [
         'create_heading' => 'Ustvari vrednost lastnosti',
         'edit_heading' => 'Uredi vrednost lastnosti',
+        'merge_heading' => 'Združi vrednost',
+        'merge_from_label' => 'Združi vrednost…',
+        'merge_to_label' => 'Z vrednostjo…*',
+        'merge_helper' => 'To dejanje bo vsem izdelkom zamenjalo trenutno lastnost s to, označeno zgoraj. Nato bo trenutna lastnost izbrisana.',
+        'merge_submit_label' => 'Združi',
+        'cancel_label' => 'Prekliči',
+        'merge_confirm_title' => 'Ste prepričani, da želite združiti?',
+        'merge_confirm_body' => 'Vsi izdelki s trenutno vrednostjo bodo posodobljeni na izbrano vrednost. Dejanja ni mogoče razveljaviti.',
     ],
 
     'messages' => [
         'created' => 'Vrednost lastnosti je bila uspešno ustvarjena.',
         'updated' => 'Vrednost lastnosti je bila uspešno posodobljena.',
         'deleted' => 'Vrednost lastnosti je bila uspešno izbrisana.',
+        'merged_title' => 'Vrednosti so združene',
+        'merged_body' => 'Posodobili smo :affected izdelkov. Izbrana vrednost je ostala, druga je bila odstranjena.',
+        'merged_error_title' => 'Združevanje ni uspelo',
+        'merged_error_body' => 'Vrednosti trenutno ni mogoče združiti. Poskusite znova.',
     ],
 
     'pages' => [

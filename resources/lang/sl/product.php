@@ -7,6 +7,7 @@ return [
     'fields' => [
         'product_type' => 'Tip proizvoda',
         'origin_country_id' => 'Država izvora',
+        'tariff_code_id' => 'Carinska oznaka (CN)',
         'meta_title' => 'Meta naslov',
         'meta_description' => 'Meta opis',
         'is_active' => 'Aktiven',
@@ -19,6 +20,7 @@ return [
     'placeholders' => [
         'product_type' => 'Izberi tip proizvoda (neobvezno)',
         'origin_country_id' => 'Izberi državo izvora',
+        'tariff_code_id' => 'Izberi carinsko oznako (CN)',
         'meta_title' => 'SEO meta naslov',
         'meta_description' => 'SEO meta opis',
         'category_id' => 'Izberi kategorijo (neobvezno)',
@@ -51,5 +53,25 @@ return [
         'has_free_delivery_tenant' => 'Označi izdelek kot brezplačna dostava za :tenant',
         'available_from_date' => 'Datum/čas, ko bo izdelek na voljo',
         'sorting_label' => 'Neobvezna oznaka, ki vpliva na razvrščanje v seznamih',
+    ],
+
+    'price' => [
+        'tab' => 'Cene',
+        'section' => 'Cenik izdelka',
+        'list' => 'Cenik',
+        'fields' => [
+            'price_list' => 'Cenik',
+            'price' => 'Cena',
+            'tax_included' => 'Z DDV',
+            'valid_from' => 'Velja od',
+            'valid_to' => 'Velja do',
+        ],
+        'actions' => [
+            'add' => 'Dodaj ceno',
+        ],
+        'validation' => [
+            'unique_title' => 'Podvojen vnos cene',
+            'unique_body' => 'Cena za ta cenik z istim datumom "Velja od" že obstaja.',
+        ],
     ],
 ];

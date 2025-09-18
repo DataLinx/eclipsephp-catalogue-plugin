@@ -348,14 +348,14 @@ trait HasTenantScopedData
             $relationKey = $this->getTenantDataRelation()->getForeignKeyName();
 
             // Filter again to respect data model fillable
-            $tenantSpecificData = $this->filterTenantDataForPersistence($tenantSpecificData);
+            $filteredTenantSpecificData = $this->filterTenantDataForPersistence($tenantSpecificData);
 
             $dataModelClass::updateOrCreate(
                 [
                     $relationKey => $this->id,
                     $tenantFK => $tenantId,
                 ],
-                $tenantSpecificData
+                $filteredTenantSpecificData
             );
         }
 

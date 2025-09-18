@@ -24,6 +24,9 @@ abstract class TestCase extends BaseTestCase
         ini_set('display_errors', 1);
         error_reporting(E_ALL);
 
+        // Increase memory limit to 512M
+        ini_set('memory_limit', '512M');
+
         parent::setUp();
 
         // Disable Scout during tests to prevent indexing operations

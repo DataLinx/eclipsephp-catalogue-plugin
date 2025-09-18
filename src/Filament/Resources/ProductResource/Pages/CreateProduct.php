@@ -30,7 +30,7 @@ class CreateProduct extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         foreach (array_keys($data) as $key) {
-            if (str_starts_with($key, 'property_values_')) {
+            if (str_starts_with($key, 'property_values_') || str_starts_with($key, 'custom_property_')) {
                 unset($data[$key]);
             }
         }
@@ -56,6 +56,26 @@ class CreateProduct extends CreateRecord
     protected function handleRecordCreation(array $data): Model
     {
         $tenantData = $this->extractTenantDataFromFormData($data);
+        // Auto-assign default product status if missing
+        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+        if (! $tenantFK) {
+            if (empty($tenantData['product_status_id'] ?? null)) {
+                $default = \Eclipse\Catalogue\Models\ProductStatus::query()->where('is_default', true)->orderBy('priority')->first();
+                if ($default) {
+                    $tenantData['product_status_id'] = $default->id;
+                }
+            }
+        } else {
+            foreach ($tenantData as $siteId => &$td) {
+                if (empty($td['product_status_id'] ?? null)) {
+                    $default = \Eclipse\Catalogue\Models\ProductStatus::query()->where($tenantFK, $siteId)->where('is_default', true)->orderBy('priority')->first();
+                    if ($default) {
+                        $td['product_status_id'] = $default->id;
+                    }
+                }
+            }
+            unset($td);
+        }
         $productData = $this->cleanFormDataForMainRecord($data);
 
         return Product::createWithTenantData($productData, $tenantData);
@@ -90,6 +110,29 @@ class CreateProduct extends CreateRecord
 
                 if (! empty($valuesToAttach)) {
                     $product->propertyValues()->attach($valuesToAttach);
+                }
+            }
+        }
+
+        // Handle custom properties
+        $customPropertyData = [];
+        foreach ($rawState as $key => $value) {
+            if (is_string($key) && str_starts_with($key, 'custom_property_')) {
+                $propertyId = str_replace('custom_property_', '', $key);
+                $customPropertyData[$propertyId] = $value;
+            }
+        }
+
+        foreach ($customPropertyData as $propertyId => $value) {
+            $property = \Eclipse\Catalogue\Models\Property::find($propertyId);
+            if ($property && $property->isCustomType()) {
+                if ($property->supportsMultilang() && is_array($value)) {
+                    $filteredValue = array_filter($value, fn ($v) => $v !== null && $v !== '');
+                    if (! empty($filteredValue)) {
+                        $product->setCustomPropertyValue($property, $value);
+                    }
+                } elseif ($value !== null && $value !== '') {
+                    $product->setCustomPropertyValue($property, $value);
                 }
             }
         }

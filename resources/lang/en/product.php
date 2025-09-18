@@ -7,6 +7,7 @@ return [
     'fields' => [
         'product_type' => 'Product Type',
         'origin_country_id' => 'Country of Origin',
+        'tariff_code_id' => 'Tariff code (CN)',
         'meta_title' => 'Meta Title',
         'meta_description' => 'Meta Description',
         'is_active' => 'Active',
@@ -19,6 +20,7 @@ return [
     'placeholders' => [
         'product_type' => 'Select product type (optional)',
         'origin_country_id' => 'Select country of origin',
+        'tariff_code_id' => 'Select tariff code (CN)',
         'meta_title' => 'SEO meta title',
         'meta_description' => 'SEO meta description',
         'category_id' => 'Select category (optional)',
@@ -51,5 +53,25 @@ return [
         'has_free_delivery_tenant' => 'Mark product as free delivery for :tenant',
         'available_from_date' => 'Date/time when the product becomes available',
         'sorting_label' => 'Optional label used to influence sorting within lists',
+    ],
+
+    'price' => [
+        'tab' => 'Prices',
+        'section' => 'Product price list',
+        'list' => 'Price list',
+        'fields' => [
+            'price_list' => 'Price list',
+            'price' => 'Price',
+            'tax_included' => 'Incl. tax',
+            'valid_from' => 'Valid from',
+            'valid_to' => 'Valid to',
+        ],
+        'actions' => [
+            'add' => 'Add price',
+        ],
+        'validation' => [
+            'unique_title' => 'Duplicate price',
+            'unique_body' => 'A price for this price list with this "Valid from" date already exists.',
+        ],
     ],
 ];
