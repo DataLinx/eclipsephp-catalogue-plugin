@@ -12,6 +12,7 @@ use Eclipse\Catalogue\Models\Product;
 use Eclipse\Catalogue\Models\Property;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
 use Eclipse\Catalogue\Traits\HasTenantFields;
+use Eclipse\Common\Foundation\Helpers\MediaHelper;
 use Eclipse\World\Models\Country;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Placeholder;
@@ -417,12 +418,11 @@ class ProductResource extends Resource implements HasShieldPermissions
                         $images = $record->getMedia('images');
 
                         if ($images->isEmpty()) {
-                            return [static::getPlaceholderImageUrl()];
+                            return [MediaHelper::getPlaceholderImageUrl('No Image')];
                         }
 
                         return $images->map(fn ($media) => $media->getUrl())->toArray();
                     })
-                    ->defaultImageUrl(static::getPlaceholderImageUrl())
                     ->preview(fn (Model $record): array => [
                         'title' => "{$record->name} Product",
                         'link' => ProductResource::getUrl('edit', [
@@ -691,13 +691,6 @@ class ProductResource extends Resource implements HasShieldPermissions
         return array_filter([
             'Code' => $record->code,
         ]);
-    }
-
-    protected static function getPlaceholderImageUrl(): string
-    {
-        $svg = view('eclipse-catalogue::components.placeholder-image')->render();
-
-        return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
 
     public static function getPermissionPrefixes(): array
