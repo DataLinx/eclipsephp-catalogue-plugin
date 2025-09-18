@@ -83,6 +83,11 @@ class PropertyValueResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                Tables\Columns\ViewColumn::make('group_and_aliases')
+                    ->label(__('eclipse-catalogue::property-value.table.columns.group'))
+                    ->view('eclipse-catalogue::filament.columns.group-and-aliases')
+                    ->extraAttributes(['class' => 'space-x-1']),
+
                 Tables\Columns\ImageColumn::make('image')
                     ->label(__('eclipse-catalogue::property-value.table.columns.image'))
                     ->disk('public')
@@ -169,6 +174,106 @@ class PropertyValueResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('group_values')
+                        ->label(__('eclipse-catalogue::property-value.table.actions.group_aliases'))
+                        ->icon('heroicon-o-rectangle-group')
+                        ->form(function (\Filament\Tables\Actions\BulkAction $action) {
+                            $firstRecord = $action->getRecords()->first();
+                            $derivedPropertyId = $firstRecord?->property_id ?? (request()->has('property') ? (int) request('property') : null);
+
+                            return [
+                                \Filament\Forms\Components\View::make('eclipse-catalogue::filament.bulk.group-selected-preview')
+                                    ->statePath('selected_records')
+                                    ->dehydrated(false)
+                                    ->afterStateHydrated(function ($component) use ($action) {
+                                        $component->state($action->getRecords());
+                                    })
+                                    ->columnSpanFull(),
+
+                                \Filament\Forms\Components\Hidden::make('property_id')
+                                    ->default($derivedPropertyId),
+
+                                \Filament\Forms\Components\Select::make('target_id')
+                                    ->label(__('eclipse-catalogue::property-value.modal_grouping.target_label'))
+                                    ->helperText(__('eclipse-catalogue::property-value.grouping.helper_target'))
+                                    ->required()
+                                    ->options(function (\Filament\Forms\Get $get) {
+                                        $query = PropertyValue::query();
+                                        $propertyId = $get('property_id');
+                                        if ($propertyId) {
+                                            $query->sameProperty((int) $propertyId);
+                                        }
+
+                                        return $query->orderBy('value')->pluck('value', 'id');
+                                    })
+                                    ->searchable(),
+                            ];
+                        })
+                        ->action(function (\Illuminate\Support\Collection $records, array $data) {
+                            try {
+                                if ($records->isEmpty()) {
+                                    return;
+                                }
+
+                                $target = PropertyValue::findOrFail((int) $data['target_id']);
+
+                                $sourceIds = $records->pluck('id');
+                                if ($sourceIds->contains($target->id)) {
+                                    Notification::make()->title(__('eclipse-catalogue::property-value.grouping.error_title'))->body(__('eclipse-catalogue::property-value.grouping.errors.target_in_sources'))->danger()->send();
+
+                                    return;
+                                }
+
+                                if ($target->group_value_id !== null) {
+                                    Notification::make()->title(__('eclipse-catalogue::property-value.grouping.error_title'))->body(__('eclipse-catalogue::property-value.grouping.errors.target_is_member'))->danger()->send();
+
+                                    return;
+                                }
+
+                                $updated = 0;
+                                foreach ($records as $record) {
+                                    /** @var PropertyValue $source */
+                                    $source = $record instanceof PropertyValue ? $record : PropertyValue::findOrFail($record);
+                                    if ($source->property_id !== $target->property_id) {
+                                        Notification::make()->title(__('eclipse-catalogue::property-value.grouping.error_title'))->body(__('eclipse-catalogue::property-value.grouping.errors.different_property'))->danger()->send();
+
+                                        return;
+                                    }
+                                    $source->groupInto($target->id);
+                                    $updated++;
+                                }
+
+                                Notification::make()->title(__('eclipse-catalogue::property-value.grouping.success_grouped_title'))
+                                    ->body(__('eclipse-catalogue::property-value.grouping.success_grouped_body', ['count' => $updated, 'target' => $target->value]))
+                                    ->success()->send();
+                            } catch (\Throwable $e) {
+                                \Log::error('Bulk group failed', ['exception' => $e]);
+                                Notification::make()->title(__('eclipse-catalogue::property-value.grouping.error_title'))->body(__('eclipse-catalogue::property-value.messages.merged_error_body'))->danger()->send();
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    Tables\Actions\BulkAction::make('ungroup_values')
+                        ->label(__('eclipse-catalogue::property-value.table.actions.remove_from_group'))
+                        ->icon('heroicon-o-squares-2x2')
+                        ->action(function (\Illuminate\Support\Collection $records) {
+                            try {
+                                $updated = 0;
+                                foreach ($records as $record) {
+                                    /** @var PropertyValue $model */
+                                    $model = $record instanceof PropertyValue ? $record : PropertyValue::findOrFail($record);
+                                    $model->removeFromGroup();
+                                    $updated++;
+                                }
+                                Notification::make()->title(__('eclipse-catalogue::property-value.grouping.success_ungrouped_title'))
+                                    ->body(__('eclipse-catalogue::property-value.grouping.success_ungrouped_body', ['count' => $updated]))
+                                    ->success()->send();
+                            } catch (\Throwable $e) {
+                                \Log::error('Bulk ungroup failed', ['exception' => $e]);
+                                Notification::make()->title(__('eclipse-catalogue::property-value.grouping.error_title'))->body(__('eclipse-catalogue::property-value.messages.merged_error_body'))->danger()->send();
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
@@ -203,6 +308,6 @@ class PropertyValueResource extends Resource
             $query->where('property_id', request('property'));
         }
 
-        return $query;
+        return $query->groupedOrder();
     }
 }

@@ -30,6 +30,8 @@ return [
     'table' => [
         'columns' => [
             'value' => 'Vrednost',
+            'group' => 'Skupina',
+            'aliases' => 'Aliasi',
             'image' => 'Slika',
             'info_url' => 'URL informacij',
             'sort' => 'Vrstni red',
@@ -43,6 +45,8 @@ return [
             'edit' => 'Uredi',
             'delete' => 'Izbriši',
             'merge' => 'Združi…',
+            'group_aliases' => 'Združi (aliase)',
+            'remove_from_group' => 'Odstrani iz skupine',
         ],
     ],
 
@@ -69,6 +73,21 @@ return [
         'merged_error_body' => 'Vrednosti trenutno ni mogoče združiti. Poskusite znova.',
     ],
 
+    'grouping' => [
+        'success_grouped_title' => 'Združeno',
+        'success_grouped_body' => ':count vrednost(i) združene pod ":target".',
+        'success_ungrouped_title' => 'Posodobljeno',
+        'success_ungrouped_body' => ':count vrednost(i) odstranjene iz skupine.',
+        'error_title' => 'Združevanje ni uspelo',
+        'selected_values' => 'Izbrane vrednosti',
+        'helper_target' => 'Izberite ciljno vrednost, v katero bodo združene izbrane vrednosti.',
+        'errors' => [
+            'target_in_sources' => 'Cilj ne sme biti med izbranimi vrednostmi.',
+            'target_is_member' => 'Izbrani cilj že pripada drugi skupini.',
+            'different_property' => 'Vse izbrane vrednosti in cilj morajo pripadati isti lastnosti.',
+        ],
+    ],
+
     'pages' => [
         'title' => [
             'with_property' => 'Vrednosti za: :property',
@@ -78,5 +97,13 @@ return [
             'properties' => 'Lastnosti',
             'list' => 'Seznam',
         ],
+    ],
+
+    'ui' => [
+        'group_badge' => 'Skupina',
+    ],
+
+    'modal_grouping' => [
+        'target_label' => 'Ciljna vrednost',
     ],
 ];

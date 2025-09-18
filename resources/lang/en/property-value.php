@@ -30,6 +30,8 @@ return [
     'table' => [
         'columns' => [
             'value' => 'Value',
+            'group' => 'Group',
+            'aliases' => 'Aliases',
             'image' => 'Image',
             'info_url' => 'Info URL',
             'sort' => 'Sort',
@@ -43,6 +45,8 @@ return [
             'edit' => 'Edit',
             'delete' => 'Delete',
             'merge' => 'Merge…',
+            'group_aliases' => 'Group (aliases)',
+            'remove_from_group' => 'Remove from group',
         ],
     ],
 
@@ -69,6 +73,21 @@ return [
         'merged_error_body' => 'We couldn’t merge these values. Please try again.',
     ],
 
+    'grouping' => [
+        'success_grouped_title' => 'Grouped',
+        'success_grouped_body' => ':count value(s) grouped under ":target".',
+        'success_ungrouped_title' => 'Updated',
+        'success_ungrouped_body' => ':count value(s) removed from group.',
+        'error_title' => 'Grouping failed',
+        'selected_values' => 'Selected values',
+        'helper_target' => 'Choose the target value into which the selected values will be grouped.',
+        'errors' => [
+            'target_in_sources' => 'The target cannot be one of the selected values.',
+            'target_is_member' => 'The selected target already belongs to another group.',
+            'different_property' => 'All selected values and the target must belong to the same property.',
+        ],
+    ],
+
     'pages' => [
         'title' => [
             'with_property' => 'Values for: :property',
@@ -78,5 +97,13 @@ return [
             'properties' => 'Properties',
             'list' => 'List',
         ],
+    ],
+
+    'ui' => [
+        'group_badge' => 'Group',
+    ],
+
+    'modal_grouping' => [
+        'target_label' => 'Target value',
     ],
 ];
