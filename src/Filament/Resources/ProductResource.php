@@ -4,6 +4,7 @@ namespace Eclipse\Catalogue\Filament\Resources;
 
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Eclipse\Catalogue\Enums\PropertyInputType;
+use Eclipse\Catalogue\Enums\PropertyType;
 use Eclipse\Catalogue\Filament\Filters\CustomPropertyConstraint;
 use Eclipse\Catalogue\Filament\Forms\Components\ImageManager;
 use Eclipse\Catalogue\Filament\Resources\ProductResource\Pages;
@@ -16,6 +17,7 @@ use Eclipse\Catalogue\Models\ProductStatus;
 use Eclipse\Catalogue\Models\Property;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
 use Eclipse\Catalogue\Traits\HasTenantFields;
+use Eclipse\Common\Admin\Filament\Tables\Columns\SliderColumn;
 use Eclipse\Common\Foundation\Helpers\MediaHelper;
 use Eclipse\World\Models\Country;
 use Eclipse\World\Models\TariffCode;
@@ -46,7 +48,6 @@ use Filament\Tables\Actions\ForceDeleteBulkAction;
 use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\QueryBuilder;
 use Filament\Tables\Filters\SelectFilter;
@@ -571,7 +572,7 @@ class ProductResource extends Resource implements HasShieldPermissions
             ->columns([
                 TextColumn::make('id'),
 
-                ImageColumn::make('images')
+                SliderColumn::make('images')
                     ->label('Images')
                     ->circular()
                     ->stacked()
@@ -579,9 +580,8 @@ class ProductResource extends Resource implements HasShieldPermissions
                         $images = $record->getMedia('images');
 
                         if ($images->isEmpty()) {
-                            // Fallback for test environment when MediaHelper is not autoloaded
                             if (class_exists(MediaHelper::class)) {
-                                return [MediaHelper::getPlaceholderImageUrl('No Image')];
+                                return [MediaHelper::getPlaceholderImageUrl()];
                             }
 
                             return [];
@@ -589,12 +589,8 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                         return $images->map(fn ($media) => $media->getUrl())->toArray();
                     })
-                    ->preview(fn (Model $record): array => [
-                        'title' => "{$record->name} Product",
-                        'link' => ProductResource::getUrl('edit', [
-                            'record' => $record?->id,
-                        ]),
-                    ]),
+                    ->title(fn (Product $record) => "{$record->name} - Product Images")
+                    ->link(fn (Product $record) => ProductResource::getUrl('edit', ['record' => $record])),
 
                 TextColumn::make('name')
                     ->toggleable(false),
@@ -1044,7 +1040,17 @@ class ProductResource extends Resource implements HasShieldPermissions
 
     protected static function getCustomPropertyColumns(): array
     {
-        $customProperties = Property::where('type', 'custom')->get();
+        try {
+            // Check if the type column exists before querying
+            $customProperties = Property::where('type', PropertyType::CUSTOM->value)->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // If type column doesn't exist, return empty array
+            if (str_contains($e->getMessage(), "Unknown column 'type'")) {
+                return [];
+            }
+            throw $e;
+        }
+
         $columns = [];
 
         foreach ($customProperties as $property) {
@@ -1079,10 +1085,19 @@ class ProductResource extends Resource implements HasShieldPermissions
     protected static function getCustomPropertyConstraints(): array
     {
         $constraints = [];
-        $customProperties = Property::where('is_active', true)
-            ->where('type', 'custom')
-            ->where('input_type', '!=', 'file')
-            ->get();
+
+        try {
+            $customProperties = Property::where('is_active', true)
+                ->where('type', PropertyType::CUSTOM->value)
+                ->where('input_type', '!=', 'file')
+                ->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // If type column doesn't exist, return empty array
+            if (str_contains($e->getMessage(), "Unknown column 'type'")) {
+                return [];
+            }
+            throw $e;
+        }
 
         foreach ($customProperties as $property) {
             $constraints[] = CustomPropertyConstraint::forProperty($property);
