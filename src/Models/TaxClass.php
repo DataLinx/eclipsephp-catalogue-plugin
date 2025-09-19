@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 
 class TaxClass extends Model
 {
@@ -43,7 +42,7 @@ class TaxClass extends Model
     {
         parent::boot();
 
-        static::creating(function (self $category): void {
+        static::creating(function (self $model): void {
             // Set tenant foreign key, if configured
             $tenantModel = config('eclipse-catalogue.tenancy.model');
             $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
@@ -51,11 +50,15 @@ class TaxClass extends Model
             if ($tenantModel && $tenantFK) {
                 $tenant = Filament::getTenant();
 
-                if (empty($tenant)) {
-                    throw new RuntimeException('Tenancy is enabled, but no tenant is set');
+                if ($tenant) {
+                    $model->{$tenantFK} = $tenant->id;
+                } else {
+                    // Set default tenant ID when no Filament tenant is available
+                    $defaultTenant = $tenantModel::first();
+                    if ($defaultTenant) {
+                        $model->{$tenantFK} = $defaultTenant->id;
+                    }
                 }
-
-                $category->{$tenantFK} = $tenant->id;
             }
         });
 
@@ -95,7 +98,7 @@ class TaxClass extends Model
 
         // Add tenant scope if tenancy is configured
         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-        $currentTenantId = $tenantId ?: \Filament\Facades\Filament::getTenant()?->id;
+        $currentTenantId = $tenantId ?: Filament::getTenant()?->id;
         if ($tenantFK && $currentTenantId) {
             $query->where($tenantFK, $currentTenantId);
         }

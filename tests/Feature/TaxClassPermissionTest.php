@@ -10,7 +10,7 @@ use function Pest\Livewire\livewire;
 
 beforeEach(function () {
     $this->migrate();
-    $this->setUpSuperAdminAndTenant();
+    $this->setUpSuperAdmin();
 });
 
 it('policy prevents deletion of default class regardless of user permissions', function () {

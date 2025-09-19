@@ -35,10 +35,6 @@ class TaxClassResource extends Resource implements HasShieldPermissions
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static bool $isScopedToTenant = true;
-
-    protected static ?string $tenantOwnershipRelationshipName = 'tenant';
-
     public static function getModelLabel(): string
     {
         return __('eclipse-catalogue::tax-class.singular');
@@ -53,51 +49,58 @@ class TaxClassResource extends Resource implements HasShieldPermissions
     {
         return $form
             ->schema([
-                TextInput::make('name')
-                    ->label(__('eclipse-catalogue::tax-class.fields.name'))
-                    ->required()
-                    ->maxLength(255)
-                    ->unique(
-                        table: 'pim_tax_classes',
-                        column: 'name',
-                        ignoreRecord: true,
-                        modifyRuleUsing: function ($rule) {
-                            // Add tenant scope to unique validation
-                            $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                            $tenantId = Filament::getTenant()?->id;
-                            if ($tenantFK && $tenantId) {
-                                $rule->where($tenantFK, $tenantId);
-                            }
+                \Filament\Forms\Components\Grid::make(2)
+                    ->schema([
+                        TextInput::make('name')
+                            ->label(__('eclipse-catalogue::tax-class.fields.name'))
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(
+                                table: 'pim_tax_classes',
+                                column: 'name',
+                                ignoreRecord: true,
+                                modifyRuleUsing: function ($rule) {
+                                    // Add tenant scope to unique validation
+                                    $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+                                    $tenantId = Filament::getTenant()?->id;
+                                    if ($tenantFK && $tenantId) {
+                                        $rule->where($tenantFK, $tenantId);
+                                    }
 
-                            return $rule;
-                        }
-                    ),
+                                    return $rule;
+                                }
+                            ),
+
+                        TextInput::make('rate')
+                            ->label(__('eclipse-catalogue::tax-class.fields.rate'))
+                            ->required()
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%'),
+                    ]),
 
                 Textarea::make('description')
                     ->label(__('eclipse-catalogue::tax-class.fields.description'))
                     ->rows(3)
-                    ->maxLength(65535),
+                    ->maxLength(65535)
+                    ->columnSpanFull(),
 
-                TextInput::make('rate')
-                    ->label(__('eclipse-catalogue::tax-class.fields.rate'))
-                    ->required()
-                    ->numeric()
-                    ->minValue(0)
-                    ->maxValue(100)
-                    ->step(0.01)
-                    ->suffix('%'),
+                \Filament\Forms\Components\Grid::make(3)
+                    ->schema([
+                        Toggle::make('is_default')
+                            ->label(__('eclipse-catalogue::tax-class.fields.is_default'))
+                            ->helperText(__('eclipse-catalogue::tax-class.messages.default_class_help')),
 
-                Toggle::make('is_default')
-                    ->label(__('eclipse-catalogue::tax-class.fields.is_default'))
-                    ->helperText(__('eclipse-catalogue::tax-class.messages.default_class_help')),
+                        Placeholder::make('created_at')
+                            ->label('Created Date')
+                            ->content(fn (?TaxClass $record): string => $record?->created_at?->diffForHumans() ?? '-'),
 
-                Placeholder::make('created_at')
-                    ->label('Created Date')
-                    ->content(fn (?TaxClass $record): string => $record?->created_at?->diffForHumans() ?? '-'),
-
-                Placeholder::make('updated_at')
-                    ->label('Last Modified Date')
-                    ->content(fn (?TaxClass $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                        Placeholder::make('updated_at')
+                            ->label('Last Modified Date')
+                            ->content(fn (?TaxClass $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                    ]),
             ]);
     }
 
