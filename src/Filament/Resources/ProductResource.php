@@ -17,8 +17,8 @@ use Eclipse\Catalogue\Models\ProductStatus;
 use Eclipse\Catalogue\Models\Property;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
 use Eclipse\Catalogue\Traits\HasTenantFields;
-use Eclipse\Common\Admin\Filament\Tables\Columns\SliderColumn;
-use Eclipse\Common\Foundation\Helpers\MediaHelper;
+use Eclipse\Common\Filament\Tables\Columns\ImageColumn;
+use Eclipse\Common\Helpers\MediaHelper;
 use Eclipse\World\Models\Country;
 use Eclipse\World\Models\TariffCode;
 use Filament\Facades\Filament;
@@ -572,8 +572,9 @@ class ProductResource extends Resource implements HasShieldPermissions
             ->columns([
                 TextColumn::make('id'),
 
-                SliderColumn::make('images')
+                ImageColumn::make('images')
                     ->label('Images')
+                    ->preview()
                     ->circular()
                     ->stacked()
                     ->getStateUsing(function (Product $record): array {
