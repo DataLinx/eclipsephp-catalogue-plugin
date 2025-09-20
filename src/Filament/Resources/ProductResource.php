@@ -4,6 +4,7 @@ namespace Eclipse\Catalogue\Filament\Resources;
 
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Eclipse\Catalogue\Enums\PropertyInputType;
+use Eclipse\Catalogue\Enums\PropertyType;
 use Eclipse\Catalogue\Filament\Filters\CustomPropertyConstraint;
 use Eclipse\Catalogue\Filament\Forms\Components\ImageManager;
 use Eclipse\Catalogue\Filament\Resources\ProductResource\Pages;
@@ -17,8 +18,11 @@ use Eclipse\Catalogue\Models\ProductStatus;
 use Eclipse\Catalogue\Models\Property;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
 use Eclipse\Catalogue\Traits\HasTenantFields;
+use Eclipse\Common\Filament\Tables\Columns\ImageColumn;
+use Eclipse\Common\Helpers\MediaHelper;
 use Eclipse\World\Models\Country;
 use Eclipse\World\Models\TariffCode;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
@@ -43,7 +47,6 @@ use Filament\Tables\Actions\ForceDeleteBulkAction;
 use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\QueryBuilder;
 use Filament\Tables\Filters\SelectFilter;
@@ -262,7 +265,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                                                 'name',
                                                 function ($query) {
                                                     $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                                                    $currentTenant = \Filament\Facades\Filament::getTenant();
+                                                    $currentTenant = Filament::getTenant();
 
                                                     if ($tenantFK && $currentTenant) {
                                                         return $query->whereHas('productTypeData', function ($q) use ($tenantFK, $currentTenant) {
@@ -568,40 +571,26 @@ class ProductResource extends Resource implements HasShieldPermissions
             ->columns([
                 TextColumn::make('id'),
 
-                ImageColumn::make('cover_image')
-                    ->stacked()
-                    ->label('Image')
-                    ->getStateUsing(function (Product $record) {
-                        $url = $record->getFirstMediaUrl('images', 'thumb');
-
-                        return $url ?: null;
-                    })
+                ImageColumn::make('images')
+                    ->label('Images')
+                    ->preview()
                     ->circular()
-                    ->defaultImageUrl(static::getPlaceholderImageUrl())
-                    ->extraImgAttributes(function (Product $record) {
-                        $coverMedia = $record->getMedia('images')
-                            ->filter(fn ($media) => $media->getCustomProperty('is_cover', false))
-                            ->first();
+                    ->stacked()
+                    ->getStateUsing(function (Product $record): array {
+                        $images = $record->getMedia('images');
 
-                        if (! $coverMedia) {
-                            $coverMedia = $record->getMedia('images')->first();
+                        if ($images->isEmpty()) {
+                            if (class_exists(MediaHelper::class)) {
+                                return [MediaHelper::getPlaceholderImageUrl()];
+                            }
+
+                            return [];
                         }
 
-                        $fullImageUrl = $coverMedia ? $coverMedia->getUrl() : null;
-                        $imageName = $coverMedia ? json_encode($coverMedia->getCustomProperty('name', [])) : '{}';
-                        $imageDescription = $coverMedia ? json_encode($coverMedia->getCustomProperty('description', [])) : '{}';
-
-                        return [
-                            'class' => 'cursor-pointer product-image-trigger',
-                            'data-url' => $fullImageUrl ?: static::getPlaceholderImageUrl(),
-                            'data-image-name' => htmlspecialchars($imageName, ENT_QUOTES, 'UTF-8'),
-                            'data-image-description' => htmlspecialchars($imageDescription, ENT_QUOTES, 'UTF-8'),
-                            'data-product-name' => htmlspecialchars(json_encode($record->getTranslations('name')), ENT_QUOTES, 'UTF-8'),
-                            'data-product-code' => $record->code ?: '',
-                            'data-filename' => $coverMedia ? $coverMedia->file_name : '',
-                            'onclick' => 'event.stopPropagation(); return false;',
-                        ];
-                    }),
+                        return $images->map(fn ($media) => $media->getUrl())->toArray();
+                    })
+                    ->title(fn (Product $record) => "{$record->name} - Product Images")
+                    ->link(fn (Product $record) => ProductResource::getUrl('edit', ['record' => $record])),
 
                 TextColumn::make('name')
                     ->toggleable(false),
@@ -611,7 +600,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->badge()
                     ->getStateUsing(function (Product $record) {
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
 
                         $status = null;
 
@@ -632,7 +621,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     })
                     ->color(function (Product $record) {
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
 
                         $status = null;
                         if ($record->relationLoaded('productData')) {
@@ -648,7 +637,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     })
                     ->extraAttributes(function (Product $record) {
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
 
                         $status = null;
                         if ($record->relationLoaded('productData')) {
@@ -686,7 +675,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->limit(3)
                     ->toggleable()
                     ->getStateUsing(function (Product $record) {
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key', 'site_id');
 
                         if ($currentTenant) {
@@ -758,7 +747,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->options(function () {
                         $query = ProductStatus::query();
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
                         if ($tenantFK && $currentTenant) {
                             $query->where($tenantFK, $currentTenant->id);
                         }
@@ -775,7 +764,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                             return;
                         }
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
                         $query->whereHas('productData', function ($q) use ($selected, $tenantFK, $currentTenant) {
                             if ($tenantFK && $currentTenant) {
                                 $q->where($tenantFK, $currentTenant->id);
@@ -793,7 +782,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                             return;
                         }
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
                         $query->whereHas('productData', function ($q) use ($selected, $tenantFK, $currentTenant) {
                             if ($tenantFK && $currentTenant) {
                                 $q->where($tenantFK, $currentTenant->id);
@@ -806,7 +795,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->multiple()
                     ->options(function () {
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
 
                         $query = \Eclipse\Catalogue\Models\ProductType::query();
 
@@ -853,7 +842,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->label('Groups')
                     ->multiple()
                     ->relationship('groups', 'name', function ($query) {
-                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $currentTenant = Filament::getTenant();
                         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key', 'site_id');
                         if ($currentTenant) {
                             return $query->where($tenantFK, $currentTenant->id);
@@ -866,7 +855,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->queries(
                         true: function (Builder $query) {
                             $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                            $currentTenant = \Filament\Facades\Filament::getTenant();
+                            $currentTenant = Filament::getTenant();
 
                             return $query->whereHas('productData', function ($q) use ($tenantFK, $currentTenant) {
                                 $q->where('is_active', true);
@@ -877,7 +866,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                         },
                         false: function (Builder $query) {
                             $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-                            $currentTenant = \Filament\Facades\Filament::getTenant();
+                            $currentTenant = Filament::getTenant();
 
                             return $query->whereHas('productData', function ($q) use ($tenantFK, $currentTenant) {
                                 $q->where('is_active', false);
@@ -935,7 +924,7 @@ class ProductResource extends Resource implements HasShieldPermissions
             ]);
 
         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-        $currentTenant = \Filament\Facades\Filament::getTenant();
+        $currentTenant = Filament::getTenant();
 
         if ($tenantFK && $currentTenant) {
             $query->with(['productData' => function ($q) use ($tenantFK, $currentTenant) {
@@ -982,13 +971,6 @@ class ProductResource extends Resource implements HasShieldPermissions
             ->with(['customPropertyValues.property']);
     }
 
-    protected static function getPlaceholderImageUrl(): string
-    {
-        $svg = view('eclipse-catalogue::components.placeholder-image')->render();
-
-        return 'data:image/svg+xml;base64,'.base64_encode($svg);
-    }
-
     public static function getPermissionPrefixes(): array
     {
         return [
@@ -1007,7 +989,17 @@ class ProductResource extends Resource implements HasShieldPermissions
 
     protected static function getCustomPropertyColumns(): array
     {
-        $customProperties = Property::where('type', 'custom')->get();
+        try {
+            // Check if the type column exists before querying
+            $customProperties = Property::where('type', PropertyType::CUSTOM->value)->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // If type column doesn't exist, return empty array
+            if (str_contains($e->getMessage(), "Unknown column 'type'")) {
+                return [];
+            }
+            throw $e;
+        }
+
         $columns = [];
 
         foreach ($customProperties as $property) {
@@ -1042,10 +1034,19 @@ class ProductResource extends Resource implements HasShieldPermissions
     protected static function getCustomPropertyConstraints(): array
     {
         $constraints = [];
-        $customProperties = Property::where('is_active', true)
-            ->where('type', 'custom')
-            ->where('input_type', '!=', 'file')
-            ->get();
+
+        try {
+            $customProperties = Property::where('is_active', true)
+                ->where('type', PropertyType::CUSTOM->value)
+                ->where('input_type', '!=', 'file')
+                ->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // If type column doesn't exist, return empty array
+            if (str_contains($e->getMessage(), "Unknown column 'type'")) {
+                return [];
+            }
+            throw $e;
+        }
 
         foreach ($customProperties as $property) {
             $constraints[] = CustomPropertyConstraint::forProperty($property);

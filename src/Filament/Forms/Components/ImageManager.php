@@ -11,6 +11,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class ImageManager extends Field
@@ -84,7 +85,7 @@ class ImageManager extends Field
                         $tempPath = storage_path('app/public/'.$item['temp_file']);
                         if (file_exists($tempPath)) {
                             $record->addMedia($tempPath)
-                                ->usingFileName($item['file_name'] ?? basename($tempPath))
+                                ->usingFileName($this->sanitizeFilename($item['file_name'] ?? basename($tempPath)))
                                 ->withCustomProperties([
                                     'name' => $item['name'] ?? [],
                                     'description' => $item['description'] ?? [],
@@ -98,7 +99,7 @@ class ImageManager extends Field
                     } elseif (isset($item['temp_url'])) {
                         try {
                             $record->addMediaFromUrl($item['temp_url'])
-                                ->usingFileName($item['file_name'] ?? basename($item['temp_url']))
+                                ->usingFileName($this->sanitizeFilename($item['file_name'] ?? basename($item['temp_url'])))
                                 ->withCustomProperties([
                                     'name' => $item['name'] ?? [],
                                     'description' => $item['description'] ?? [],
@@ -213,7 +214,7 @@ class ImageManager extends Field
 
                             if (file_exists($fullPath)) {
                                 $tempId = 'temp_'.uniqid();
-                                $fileName = basename($filePath);
+                                $fileName = $this->sanitizeFilename(basename($filePath));
 
                                 $currentState[] = [
                                     'id' => null,
@@ -256,7 +257,7 @@ class ImageManager extends Field
 
                         if (file_exists($fullPath)) {
                             $record->addMedia($fullPath)
-                                ->usingFileName(basename($filePath))
+                                ->usingFileName($this->sanitizeFilename(basename($filePath)))
                                 ->withCustomProperties([
                                     'name' => [],
                                     'description' => [],
@@ -331,7 +332,7 @@ class ImageManager extends Field
                                 'description' => [],
                                 'is_cover' => count($currentState) === 0,
                                 'position' => ++$maxPosition,
-                                'file_name' => basename($url),
+                                'file_name' => $this->sanitizeFilename(basename($url)),
                                 'mime_type' => 'image/*',
                                 'size' => 0,
                             ];
@@ -692,6 +693,21 @@ class ImageManager extends Field
             $firstMedia->setCustomProperty('is_cover', true);
             $firstMedia->save();
         }
+    }
+
+    protected function sanitizeFilename(string $filename): string
+    {
+        $pathInfo = pathinfo($filename);
+        $name = $pathInfo['filename'] ?? 'image';
+        $extension = isset($pathInfo['extension']) ? '.'.$pathInfo['extension'] : '';
+
+        $sanitizedName = Str::slug($name, '-');
+
+        if (empty($sanitizedName)) {
+            $sanitizedName = 'image-'.time();
+        }
+
+        return $sanitizedName.$extension;
     }
 
     protected function cleanupOldTempFiles(): void
