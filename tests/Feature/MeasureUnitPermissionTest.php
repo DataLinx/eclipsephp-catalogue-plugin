@@ -75,6 +75,9 @@ test('unauthorized access can be prevented', function () {
     $this->assertSoftDeleted($measureUnit);
 
     livewire(ListMeasureUnits::class)
+        ->filterTable('trashed')
+        ->assertTableActionExists('restore')
+        ->assertTableActionExists('forceDelete')
         ->assertTableActionDisabled('restore', $measureUnit)
         ->assertTableActionDisabled('forceDelete', $measureUnit);
 });

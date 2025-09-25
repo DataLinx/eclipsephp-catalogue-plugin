@@ -3,22 +3,24 @@
 namespace Eclipse\Catalogue\Filament\Resources;
 
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
-use Eclipse\Catalogue\Filament\Resources\ProductTypeResource\Pages;
-use Eclipse\Catalogue\Filament\Resources\ProductTypeResource\RelationManagers;
+use Eclipse\Catalogue\Filament\Resources\ProductTypeResource\Pages\CreateProductType;
+use Eclipse\Catalogue\Filament\Resources\ProductTypeResource\Pages\EditProductType;
+use Eclipse\Catalogue\Filament\Resources\ProductTypeResource\Pages\ListProductTypes;
+use Eclipse\Catalogue\Filament\Resources\ProductTypeResource\RelationManagers\PropertiesRelationManager;
 use Eclipse\Catalogue\Models\ProductType;
-use Filament\Resources\Concerns\Translatable;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\ActionGroup;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\ForceDeleteAction;
-use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use LaraZeus\SpatieTranslatable\Resources\Concerns\Translatable;
 
 class ProductTypeResource extends Resource implements HasShieldPermissions
 {
@@ -28,9 +30,9 @@ class ProductTypeResource extends Resource implements HasShieldPermissions
 
     protected static ?string $slug = 'product-types';
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static ?string $navigationGroup = 'Catalogue';
+    protected static string|\UnitEnum|null $navigationGroup = 'Catalogue';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -84,7 +86,7 @@ class ProductTypeResource extends Resource implements HasShieldPermissions
             ->filters([
                 TrashedFilter::make(),
             ])
-            ->actions([
+            ->recordActions([
                 ActionGroup::make([
                     EditAction::make(),
                     DeleteAction::make(),
@@ -97,16 +99,16 @@ class ProductTypeResource extends Resource implements HasShieldPermissions
     public static function getRelations(): array
     {
         return [
-            RelationManagers\PropertiesRelationManager::class,
+            PropertiesRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListProductTypes::route('/'),
-            'create' => Pages\CreateProductType::route('/create'),
-            'edit' => Pages\EditProductType::route('/{record}/edit'),
+            'index' => ListProductTypes::route('/'),
+            'create' => CreateProductType::route('/create'),
+            'edit' => EditProductType::route('/{record}/edit'),
         ];
     }
 

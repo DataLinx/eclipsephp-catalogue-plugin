@@ -82,6 +82,9 @@ test('unauthorized access can be prevented', function () {
     $this->assertSoftDeleted($taxClass);
 
     livewire(ListTaxClasses::class)
+        ->filterTable('trashed')
+        ->assertTableActionExists('restore')
+        ->assertTableActionExists('forceDelete')
         ->assertTableActionDisabled('restore', $taxClass)
         ->assertTableActionDisabled('forceDelete', $taxClass);
 });

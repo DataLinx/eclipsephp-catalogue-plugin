@@ -2,11 +2,13 @@
 
 namespace Eclipse\Catalogue;
 
+use Eclipse\Catalogue\Livewire\TenantSwitcher;
 use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Product;
 use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Config;
+use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -45,8 +47,8 @@ class CatalogueServiceProvider extends PackageServiceProvider
         parent::boot();
 
         // Register Livewire components
-        if (class_exists(\Livewire\Livewire::class)) {
-            \Livewire\Livewire::component('eclipse-catalogue::tenant-switcher', \Eclipse\Catalogue\Livewire\TenantSwitcher::class);
+        if (class_exists(Livewire::class)) {
+            Livewire::component('eclipse-catalogue::tenant-switcher', TenantSwitcher::class);
         }
 
         FilamentAsset::register([
