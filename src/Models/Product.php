@@ -85,6 +85,7 @@ class Product extends Model implements HasMedia
         'available_from_date',
         'category_id',
         'product_status_id',
+        'tax_class_id',
     ];
 
     public function status(): ?ProductStatus
@@ -95,6 +96,11 @@ class Product extends Model implements HasMedia
     public function category(): ?Category
     {
         return $this->currentTenantData()?->category;
+    }
+
+    public function taxClass(): ?\Eclipse\Catalogue\Models\TaxClass
+    {
+        return $this->currentTenantData()?->taxClass;
     }
 
     public function type(): BelongsTo

@@ -18,6 +18,7 @@ class ProductData extends Model
         'product_id',
         'category_id',
         'product_status_id',
+        'tax_class_id',
         'sorting_label',
         'is_active',
         'available_from_date',
@@ -52,6 +53,12 @@ class ProductData extends Model
     public function status(): BelongsTo
     {
         return $this->belongsTo(ProductStatus::class, 'product_status_id');
+    }
+
+    /** @return BelongsTo<\Eclipse\Catalogue\Models\TaxClass, self> */
+    public function taxClass(): BelongsTo
+    {
+        return $this->belongsTo(\Eclipse\Catalogue\Models\TaxClass::class, 'tax_class_id');
     }
 
     /** @return BelongsTo<\Eclipse\Core\Models\Site, self> */

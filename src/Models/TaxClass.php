@@ -43,7 +43,7 @@ class TaxClass extends Model
     {
         parent::boot();
 
-        static::creating(function (self $category): void {
+        static::creating(function (self $model): void {
             // Set tenant foreign key, if configured
             $tenantModel = config('eclipse-catalogue.tenancy.model');
             $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
@@ -55,11 +55,11 @@ class TaxClass extends Model
                     throw new RuntimeException('Tenancy is enabled, but no tenant is set');
                 }
 
-                $category->{$tenantFK} = $tenant->id;
+                $model->{$tenantFK} = $tenant->id;
             }
         });
 
-        static::saving(function ($model) {
+        static::saving(function (self $model) {
             // If this class is being set as default, unset all other defaults within the same tenant
             if ($model->is_default) {
                 $query = static::where('is_default', true)
@@ -76,7 +76,7 @@ class TaxClass extends Model
             }
         });
 
-        static::deleting(function ($model) {
+        static::deleting(function (self $model) {
             // Prevent deletion of default class
             if ($model->is_default) {
                 throw ValidationException::withMessages([
@@ -95,7 +95,7 @@ class TaxClass extends Model
 
         // Add tenant scope if tenancy is configured
         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
-        $currentTenantId = $tenantId ?: \Filament\Facades\Filament::getTenant()?->id;
+        $currentTenantId = $tenantId ?: Filament::getTenant()?->id;
         if ($tenantFK && $currentTenantId) {
             $query->where($tenantFK, $currentTenantId);
         }

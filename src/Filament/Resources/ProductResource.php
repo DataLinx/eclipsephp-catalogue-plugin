@@ -217,6 +217,21 @@ class ProductResource extends Resource implements HasShieldPermissions
                                                 ->searchable()
                                                 ->preload(),
 
+                                            Select::make("tenant_data.{$tenantId}.tax_class_id")
+                                                ->label('Tax class')
+                                                ->options(function () use ($tenantId) {
+                                                    $query = \Eclipse\Catalogue\Models\TaxClass::query();
+                                                    $tenantFK = config('eclipse-catalogue.tenancy.foreign_key', 'site_id');
+                                                    if ($tenantFK) {
+                                                        $query->where($tenantFK, $tenantId);
+                                                    }
+
+                                                    return $query->orderBy('name')->pluck('name', 'id')->toArray();
+                                                })
+                                                ->searchable()
+                                                ->preload()
+                                                ->placeholder('Select tax class'),
+
                                             Select::make("tenant_data.{$tenantId}.groups")
                                                 ->label('Groups')
                                                 ->multiple()
@@ -676,6 +691,18 @@ class ProductResource extends Resource implements HasShieldPermissions
                         return is_array($category->name) ? ($category->name[app()->getLocale()] ?? reset($category->name)) : $category->name;
                     }),
 
+                TextColumn::make('tax_class')
+                    ->label('Tax class')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->getStateUsing(function (Product $record) {
+                        $taxClass = $record->currentTenantData()?->taxClass;
+                        if (! $taxClass) {
+                            return null;
+                        }
+
+                        return $taxClass->name;
+                    }),
+
                 TextColumn::make('type.name')
                     ->label(__('eclipse-catalogue::product.table.columns.type')),
 
@@ -781,6 +808,33 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 $q->where($tenantFK, $currentTenant->id);
                             }
                             $q->whereIn('product_status_id', (array) $selected);
+                        });
+                    }),
+                SelectFilter::make('tax_class_id')
+                    ->label('Tax class')
+                    ->multiple()
+                    ->options(function () {
+                        $query = \Eclipse\Catalogue\Models\TaxClass::query();
+                        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        if ($tenantFK && $currentTenant) {
+                            $query->where($tenantFK, $currentTenant->id);
+                        }
+
+                        return $query->orderBy('name')->pluck('name', 'id')->toArray();
+                    })
+                    ->query(function (Builder $query, array $data) {
+                        $selected = $data['values'] ?? ($data['value'] ?? null);
+                        if (empty($selected)) {
+                            return;
+                        }
+                        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+                        $currentTenant = \Filament\Facades\Filament::getTenant();
+                        $query->whereHas('productData', function ($q) use ($selected, $tenantFK, $currentTenant) {
+                            if ($tenantFK && $currentTenant) {
+                                $q->where($tenantFK, $currentTenant->id);
+                            }
+                            $q->whereIn('tax_class_id', (array) $selected);
                         });
                     }),
                 SelectFilter::make('category_id')
