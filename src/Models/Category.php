@@ -17,7 +17,7 @@ class Category extends Model
 {
     use HasFactory, HasTranslations, IsSearchable, ModelTree, SoftDeletes;
 
-    protected $table = 'catalogue_categories';
+    protected $table = 'pim_categories';
 
     protected $fillable = [
         'name',

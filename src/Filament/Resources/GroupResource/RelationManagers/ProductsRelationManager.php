@@ -60,8 +60,8 @@ class ProductsRelationManager extends RelationManager
                                 }
 
                                 // Exclude products already in this group
-                                $existingProductIds = $group->products()->pluck('catalogue_products.id')->toArray();
-                                $query->whereNotIn('catalogue_products.id', $existingProductIds);
+                                $existingProductIds = $group->products()->pluck('pim_products.id')->toArray();
+                                $query->whereNotIn('pim_products.id', $existingProductIds);
 
                                 return $query->pluck('name', 'id')->toArray();
                             })
@@ -135,7 +135,7 @@ class ProductsRelationManager extends RelationManager
 
                                     $refName = $livewire->getOwnerRecord()
                                         ->products()
-                                        ->where('catalogue_products.id', $refId)
+                                        ->where('pim_products.id', $refId)
                                         ->value('name');
 
                                     if (! $refName) {
@@ -155,7 +155,7 @@ class ProductsRelationManager extends RelationManager
                         $group = $this->getOwnerRecord();
 
                         $reference = $group->products()
-                            ->where('catalogue_products.id', $data['reference_id'])
+                            ->where('pim_products.id', $data['reference_id'])
                             ->firstOrFail();
 
                         if ($data['position'] === 'before') {

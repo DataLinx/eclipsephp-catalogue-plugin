@@ -10,7 +10,7 @@ class ProductData extends Model
 {
     use HasFactory;
 
-    protected $table = 'catalogue_product_data';
+    protected $table = 'pim_product_data';
 
     public $timestamps = false;
 

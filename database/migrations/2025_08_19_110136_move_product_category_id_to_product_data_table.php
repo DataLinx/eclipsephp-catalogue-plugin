@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('catalogue_product_data', function (Blueprint $table) {
+        Schema::table('pim_product_data', function (Blueprint $table) {
             $table->foreignId('category_id')->nullable()->after('product_id')
-                ->constrained('catalogue_categories')
+                ->constrained('pim_categories')
                 ->cascadeOnUpdate()
                 ->nullOnDelete();
         });
-        Schema::table('catalogue_products', function (Blueprint $table) {
+        Schema::table('pim_products', function (Blueprint $table) {
             $table->dropConstrainedForeignId('category_id');
         });
     }
@@ -27,13 +27,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('catalogue_products', function (Blueprint $table) {
+        Schema::table('pim_products', function (Blueprint $table) {
             $table->foreignId('category_id')->nullable()->after('name')
-                ->constrained('catalogue_categories')
+                ->constrained('pim_categories')
                 ->cascadeOnUpdate()
                 ->nullOnDelete();
         });
-        Schema::table('catalogue_product_data', function (Blueprint $table) {
+        Schema::table('pim_product_data', function (Blueprint $table) {
             $table->dropConstrainedForeignId('category_id');
         });
     }

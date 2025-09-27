@@ -48,7 +48,7 @@ it('does not leave duplicate pivot rows after merge', function () {
 
     $source->mergeInto($target->id);
 
-    $count = DB::table('catalogue_product_has_property_value')
+    $count = DB::table('pim_product_has_property_value')
         ->where('product_id', $product->id)
         ->where('property_value_id', $target->id)
         ->count();
@@ -73,7 +73,7 @@ it('rolls back merge when values belong to different properties', function () {
 
     // Ensure source still exists and link remains
     expect(PropertyValue::query()->whereKey($source->id)->exists())->toBeTrue();
-    $links = DB::table('catalogue_product_has_property_value')
+    $links = DB::table('pim_product_has_property_value')
         ->where('product_id', $product->id)
         ->where('property_value_id', $source->id)
         ->count();

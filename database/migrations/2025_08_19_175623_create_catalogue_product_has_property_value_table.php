@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('catalogue_product_has_property_value', function (Blueprint $table) {
-            $table->foreignId('product_id')->constrained('catalogue_products')->onDelete('cascade')->onUpdate('cascade');
+        Schema::create('pim_product_has_property_value', function (Blueprint $table) {
+            $table->foreignId('product_id')->constrained('pim_products')->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('property_value_id')->constrained('pim_property_value')->onDelete('cascade')->onUpdate('cascade');
             $table->timestamps();
             $table->unique(['product_id', 'property_value_id'], 'product_property_value_unique');
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('catalogue_product_has_property_value');
+        Schema::dropIfExists('pim_product_has_property_value');
     }
 };

@@ -96,12 +96,12 @@ it('can assign property values to products', function () {
     expect($product->propertyValues->pluck('id')->toArray())->toContain($value1->id);
     expect($product->propertyValues->pluck('id')->toArray())->toContain($value2->id);
 
-    $this->assertDatabaseHas('catalogue_product_has_property_value', [
+    $this->assertDatabaseHas('pim_product_has_property_value', [
         'product_id' => $product->id,
         'property_value_id' => $value1->id,
     ]);
 
-    $this->assertDatabaseHas('catalogue_product_has_property_value', [
+    $this->assertDatabaseHas('pim_product_has_property_value', [
         'product_id' => $product->id,
         'property_value_id' => $value2->id,
     ]);

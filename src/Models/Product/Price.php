@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Price extends Model
 {
-    protected $table = 'catalogue_product_prices';
+    protected $table = 'pim_product_prices';
 
     protected $fillable = [
         'id',

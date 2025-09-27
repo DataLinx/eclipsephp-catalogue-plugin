@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('catalogue_product_has_custom_prop_value', function (Blueprint $table) {
+        Schema::create('pim_product_has_custom_prop_value', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained('catalogue_products')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('product_id')->constrained('pim_products')->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('property_id')->constrained('pim_property')->onDelete('cascade')->onUpdate('cascade');
             $table->text('value');
             $table->timestamps();
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('catalogue_product_has_custom_prop_value');
+        Schema::dropIfExists('pim_product_has_custom_prop_value');
     }
 };

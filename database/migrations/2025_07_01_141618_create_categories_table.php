@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('catalogue_categories', function (Blueprint $table) {
+        Schema::create('pim_categories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('site_id')
                 ->constrained()
@@ -31,6 +31,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('catalogue_categories');
+        Schema::dropIfExists('pim_categories');
     }
 };

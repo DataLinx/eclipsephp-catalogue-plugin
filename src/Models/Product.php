@@ -22,7 +22,7 @@ class Product extends Model implements HasMedia
 {
     use HasFactory, HasTenantScopedData, HasTranslations, InteractsWithMedia, IsSearchable, SoftDeletes;
 
-    protected $table = 'catalogue_products';
+    protected $table = 'pim_products';
 
     protected $fillable = [
         'code',
@@ -104,7 +104,7 @@ class Product extends Model implements HasMedia
 
     public function propertyValues(): BelongsToMany
     {
-        return $this->belongsToMany(PropertyValue::class, 'catalogue_product_has_property_value', 'product_id', 'property_value_id')
+        return $this->belongsToMany(PropertyValue::class, 'pim_product_has_property_value', 'product_id', 'property_value_id')
             ->withTimestamps();
     }
 
@@ -115,7 +115,7 @@ class Product extends Model implements HasMedia
 
     public function customProperties(): BelongsToMany
     {
-        return $this->belongsToMany(Property::class, 'catalogue_product_has_custom_prop_value', 'product_id', 'property_id')
+        return $this->belongsToMany(Property::class, 'pim_product_has_custom_prop_value', 'product_id', 'property_id')
             ->withPivot('value')
             ->withTimestamps();
     }

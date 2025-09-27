@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('pim_group_has_product', function (Blueprint $table) {
             $table->foreignId('product_id')
-                ->constrained('catalogue_products', 'id')
+                ->constrained('pim_products', 'id')
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
 

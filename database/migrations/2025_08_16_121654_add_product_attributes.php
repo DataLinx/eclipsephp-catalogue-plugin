@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('catalogue_products', function (Blueprint $table) {
+        Schema::table('pim_products', function (Blueprint $table) {
             $table->string('origin_country_id', 2)->nullable();
             $table->foreign('origin_country_id')
                 ->references('id')
@@ -24,7 +24,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('catalogue_products', function (Blueprint $table) {
+        Schema::table('pim_products', function (Blueprint $table) {
             $table->dropForeign(['origin_country_id']);
             $table->dropColumn([
                 'origin_country_id',

@@ -156,7 +156,7 @@ it('serializes and deserializes multilang values correctly with inline field', f
     $product->setCustomPropertyValue($property, $multilangValue);
 
     // Verify the value is stored as JSON in the database
-    $this->assertDatabaseHas('catalogue_product_has_custom_prop_value', [
+    $this->assertDatabaseHas('pim_product_has_custom_prop_value', [
         'product_id' => $product->id,
         'property_id' => $property->id,
         'value' => json_encode($multilangValue),

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CustomPropertyValue extends Model
 {
-    protected $table = 'catalogue_product_has_custom_prop_value';
+    protected $table = 'pim_product_has_custom_prop_value';
 
     protected $fillable = [
         'product_id',

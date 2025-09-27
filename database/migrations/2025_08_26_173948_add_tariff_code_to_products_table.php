@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('catalogue_products', function (Blueprint $table) {
+        Schema::table('pim_products', function (Blueprint $table) {
             $table->foreignId('tariff_code_id')->nullable()->after('origin_country_id')->constrained('world_tariff_codes')->cascadeOnUpdate()->cascadeOnDelete();
         });
     }
 
     public function down(): void
     {
-        Schema::table('catalogue_products', function (Blueprint $table) {
+        Schema::table('pim_products', function (Blueprint $table) {
             $table->dropForeign(['tariff_code_id']);
             $table->dropColumn('tariff_code_id');
         });
