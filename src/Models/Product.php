@@ -144,6 +144,50 @@ class Product extends Model implements HasMedia
             ->withPivot('sort');
     }
 
+    /**
+     * Get all relations where this product is the parent.
+     */
+    public function relations(): HasMany
+    {
+        return $this->hasMany(ProductRelation::class, 'parent_id');
+    }
+
+    /**
+     * Get related products.
+     */
+    public function related(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'pim_product_relations', 'parent_id', 'child_id')
+            ->wherePivot('type', \Eclipse\Catalogue\Enums\ProductRelationType::RELATED->value)
+            ->withPivot('sort')
+            ->orderByPivot('sort')
+            ->orderByPivot('id');
+    }
+
+    /**
+     * Get cross-sell products.
+     */
+    public function crossSell(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'pim_product_relations', 'parent_id', 'child_id')
+            ->wherePivot('type', \Eclipse\Catalogue\Enums\ProductRelationType::CROSS_SELL->value)
+            ->withPivot('sort')
+            ->orderByPivot('sort')
+            ->orderByPivot('id');
+    }
+
+    /**
+     * Get upsell products.
+     */
+    public function upsell(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'pim_product_relations', 'parent_id', 'child_id')
+            ->wherePivot('type', \Eclipse\Catalogue\Enums\ProductRelationType::UPSELL->value)
+            ->withPivot('sort')
+            ->orderByPivot('sort')
+            ->orderByPivot('id');
+    }
+
     public function getIsActiveAttribute(): bool
     {
         return $this->getTenantFlagValue('is_active');

@@ -3,6 +3,7 @@
 namespace Eclipse\Catalogue\Filament\Resources;
 
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use Eclipse\Catalogue\Enums\ProductRelationType;
 use Eclipse\Catalogue\Enums\PropertyInputType;
 use Eclipse\Catalogue\Filament\Filters\CustomPropertyConstraint;
 use Eclipse\Catalogue\Filament\Forms\Components\ImageManager;
@@ -557,6 +558,47 @@ class ProductResource extends Resource implements HasShieldPermissions
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
                                     ->columnSpanFull(),
                             ]),
+
+                        Tabs\Tab::make('Related Products')
+                            ->schema([
+                                Tabs::make('product_relations_tabs')
+                                    ->tabs([
+                                        Tabs\Tab::make('related')
+                                            ->label('Related')
+                                            ->icon('heroicon-o-link')
+                                            ->schema([
+                                                ViewComponent::make('eclipse-catalogue::livewire.product-relations-table')
+                                                    ->viewData(fn (?Product $record) => [
+                                                        'productId' => $record?->id,
+                                                        'type' => ProductRelationType::RELATED->value,
+                                                    ]),
+                                            ]),
+
+                                        Tabs\Tab::make('cross_sell')
+                                            ->label('Cross-sell')
+                                            ->icon('heroicon-o-plus-circle')
+                                            ->schema([
+                                                ViewComponent::make('eclipse-catalogue::livewire.product-relations-table')
+                                                    ->viewData(fn (?Product $record) => [
+                                                        'productId' => $record?->id,
+                                                        'type' => ProductRelationType::CROSS_SELL->value,
+                                                    ]),
+                                            ]),
+
+                                        Tabs\Tab::make('upsell')
+                                            ->label('Upsell')
+                                            ->icon('heroicon-o-arrow-trending-up')
+                                            ->schema([
+                                                ViewComponent::make('eclipse-catalogue::livewire.product-relations-table')
+                                                    ->viewData(fn (?Product $record) => [
+                                                        'productId' => $record?->id,
+                                                        'type' => ProductRelationType::UPSELL->value,
+                                                    ]),
+                                            ]),
+                                    ])
+                                    ->columnSpanFull(),
+                            ])
+                            ->visible(fn (?Product $record) => $record && $record->exists),
                     ])
                     ->columnSpanFull(),
             ]);
@@ -1037,6 +1079,38 @@ class ProductResource extends Resource implements HasShieldPermissions
         }
 
         return $columns;
+    }
+
+    protected static function getRelationsColumns(): array
+    {
+        return [
+            TextColumn::make('related_count')
+                ->label('Related')
+                ->getStateUsing(function (Product $record) {
+                    return $record->related()->count();
+                })
+                ->badge()
+                ->color('gray')
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            TextColumn::make('cross_sell_count')
+                ->label('Cross-sell')
+                ->getStateUsing(function (Product $record) {
+                    return $record->crossSell()->count();
+                })
+                ->badge()
+                ->color('blue')
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            TextColumn::make('upsell_count')
+                ->label('Upsell')
+                ->getStateUsing(function (Product $record) {
+                    return $record->upsell()->count();
+                })
+                ->badge()
+                ->color('green')
+                ->toggleable(isToggledHiddenByDefault: true),
+        ];
     }
 
     protected static function getCustomPropertyConstraints(): array

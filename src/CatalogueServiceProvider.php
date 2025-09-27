@@ -47,6 +47,8 @@ class CatalogueServiceProvider extends PackageServiceProvider
         // Register Livewire components
         if (class_exists(\Livewire\Livewire::class)) {
             \Livewire\Livewire::component('eclipse-catalogue::tenant-switcher', \Eclipse\Catalogue\Livewire\TenantSwitcher::class);
+            \Livewire\Livewire::component('eclipse.catalogue.livewire.product-selector-table', \Eclipse\Catalogue\Livewire\ProductSelectorTable::class);
+            \Livewire\Livewire::component('eclipse.catalogue.livewire.product-relations-table', \Eclipse\Catalogue\Livewire\ProductRelationsTable::class);
         }
 
         FilamentAsset::register([
