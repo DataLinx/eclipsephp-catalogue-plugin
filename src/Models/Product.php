@@ -33,6 +33,7 @@ class Product extends Model implements HasMedia
         'gross_weight',
         'name',
         'product_type_id',
+        'measure_unit_id',
         'category_id',
         'short_description',
         'description',
@@ -85,6 +86,10 @@ class Product extends Model implements HasMedia
         'available_from_date',
         'category_id',
         'product_status_id',
+        'groups',
+        'stock',
+        'min_stock',
+        'date_stocked',
     ];
 
     public function status(): ?ProductStatus
@@ -100,6 +105,11 @@ class Product extends Model implements HasMedia
     public function type(): BelongsTo
     {
         return $this->belongsTo(ProductType::class, 'product_type_id');
+    }
+
+    public function measureUnit(): BelongsTo
+    {
+        return $this->belongsTo(MeasureUnit::class, 'measure_unit_id');
     }
 
     public function propertyValues(): BelongsToMany
@@ -170,6 +180,37 @@ class Product extends Model implements HasMedia
     public function getSortingLabelAttribute(): ?string
     {
         return $this->currentTenantData()?->sorting_label;
+    }
+
+    public function getStockAttribute(): ?float
+    {
+        return $this->currentTenantData()?->stock;
+    }
+
+    public function getMinStockAttribute(): ?float
+    {
+        return $this->currentTenantData()?->min_stock;
+    }
+
+    public function getDateStockedAttribute(): ?string
+    {
+        return $this->currentTenantData()?->date_stocked;
+    }
+
+    /**
+     * Get tenant attributes for automatic form generation
+     */
+    public function getTenantAttributes(): array
+    {
+        return static::$tenantAttributes;
+    }
+
+    /**
+     * Get tenant flags for automatic form generation
+     */
+    public function getTenantFlags(): array
+    {
+        return static::$tenantFlags;
     }
 
     public function getCustomPropertyValue(Property $property): ?CustomPropertyValue

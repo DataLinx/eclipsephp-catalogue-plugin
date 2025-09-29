@@ -39,43 +39,7 @@ class EditProduct extends EditRecord
     protected function mutateFormDataBeforeFill(array $data): array
     {
         // Hydrate property values for the product
-        if ($this->record && $this->record->product_type_id) {
-            $properties = Property::where('is_active', true)
-                ->where(function ($query) {
-                    $query->where('is_global', true)
-                        ->orWhereHas('productTypes', function ($q) {
-                            $q->where('pim_product_types.id', $this->record->product_type_id);
-                        });
-                })
-                ->get();
-
-            foreach ($properties as $property) {
-                if ($property->isListType() || $property->isColorType()) {
-                    $fieldName = "property_values_{$property->id}";
-                    $selectedValues = $this->record->propertyValues()
-                        ->where('pim_property_value.property_id', $property->id)
-                        ->pluck('pim_property_value.id')
-                        ->toArray();
-
-                    $data[$fieldName] = ($property->max_values === 1)
-                        ? ($selectedValues[0] ?? null)
-                        : $selectedValues;
-                } else {
-                    $fieldName = "custom_property_{$property->id}";
-                    $customValue = $this->record->getCustomPropertyValue($property);
-                    if ($customValue) {
-                        $data[$fieldName] = $customValue->value;
-                    } else {
-                        if ($property->supportsMultilang()) {
-                            $locales = $this->getAvailableLocales();
-                            $data[$fieldName] = array_fill_keys($locales, '');
-                        } else {
-                            $data[$fieldName] = null;
-                        }
-                    }
-                }
-            }
-        }
+        $data = $this->hydratePropertyFields($data);
 
         // Hydrate tenant-scoped fields
         $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
@@ -89,6 +53,9 @@ class EditProduct extends EditRecord
                 $data['sorting_label'] = $recordData->sorting_label;
                 $data['category_id'] = $recordData->category_id ?? null;
                 $data['product_status_id'] = $recordData->product_status_id ?? null;
+                $data['stock'] = $recordData->stock;
+                $data['min_stock'] = $recordData->min_stock;
+                $data['date_stocked'] = $recordData->date_stocked;
             }
 
             $data['groups'] = $this->record->groups()->pluck('pim_group.id')->toArray();
@@ -96,26 +63,10 @@ class EditProduct extends EditRecord
             return $data;
         }
 
-        $tenantData = [];
-        $dataRecords = $this->record->productData;
-
-        foreach ($dataRecords as $tenantRecord) {
-            $tenantId = $tenantRecord->getAttribute($tenantFK);
-            $tenantData[$tenantId] = [
-                'is_active' => $tenantRecord->is_active,
-                'has_free_delivery' => $tenantRecord->has_free_delivery,
-                'available_from_date' => $tenantRecord->available_from_date,
-                'sorting_label' => $tenantRecord->sorting_label,
-                'category_id' => $tenantRecord->category_id ?? null,
-                'product_status_id' => $tenantRecord->product_status_id ?? null,
-                'groups' => $this->record->groups()
-                    ->where('pim_group.'.config('eclipse-catalogue.tenancy.foreign_key', 'site_id'), $tenantId)
-                    ->pluck('pim_group.id')
-                    ->toArray(),
-            ];
-        }
+        $tenantData = $this->buildTenantDataPayload($tenantFK);
 
         $data['tenant_data'] = $tenantData;
+        $data['all_tenant_data'] = $tenantData;
         $currentTenant = \Filament\Facades\Filament::getTenant();
         $data['selected_tenant'] = $currentTenant?->id;
 
@@ -137,62 +88,167 @@ class EditProduct extends EditRecord
     {
         if ($this->record) {
             $state = $this->form->getRawState();
-            $propertyData = [];
-            foreach ($state as $key => $value) {
-                if (is_string($key) && str_starts_with($key, 'property_values_')) {
-                    $propertyId = str_replace('property_values_', '', $key);
-                    $propertyData[$propertyId] = $value;
-                }
-            }
+            $this->syncListPropertyValues($state);
+            $this->syncCustomPropertyValues($state);
+        }
+    }
 
-            foreach ($propertyData as $propertyId => $values) {
-                $idsToDetach = \Eclipse\Catalogue\Models\PropertyValue::query()
-                    ->where('property_id', $propertyId)
-                    ->pluck('id')
-                    ->all();
+    /**
+     * Build per-tenant payload for all tenants to prefill the form.
+     */
+    private function buildTenantDataPayload(string $tenantFK): array
+    {
+        $tenantData = [];
+        $dataRecords = $this->record->productData()->get();
 
-                if (! empty($idsToDetach)) {
-                    $this->record->propertyValues()->detach($idsToDetach);
-                }
+        // Prefetch groups per tenant in one query by mapping group_id -> site_id
+        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key', 'site_id');
+        $groupsByTenant = $this->record->groups()
+            ->select('pim_group.id', 'pim_group.'.$tenantFK)
+            ->get()
+            ->groupBy($tenantFK)
+            ->map(fn ($rows) => $rows->pluck('id')->toArray())
+            ->toArray();
 
-                // Add new values
-                if ($values) {
-                    $valuesToAttach = is_array($values) ? $values : [$values];
-                    $valuesToAttach = array_filter($valuesToAttach); // Remove null values
+        foreach ($dataRecords as $tenantRecord) {
+            $tenantId = $tenantRecord->getAttribute($tenantFK);
+            $tenantData[$tenantId] = [
+                'is_active' => $tenantRecord->is_active,
+                'has_free_delivery' => $tenantRecord->has_free_delivery,
+                'available_from_date' => $tenantRecord->available_from_date,
+                'sorting_label' => $tenantRecord->sorting_label,
+                'category_id' => $tenantRecord->category_id ?? null,
+                'product_status_id' => $tenantRecord->product_status_id ?? null,
+                'stock' => $tenantRecord->stock,
+                'min_stock' => $tenantRecord->min_stock,
+                'date_stocked' => $tenantRecord->date_stocked,
+                'groups' => $groupsByTenant[$tenantId] ?? [],
+            ];
+        }
 
-                    if (! empty($valuesToAttach)) {
-                        $this->record->propertyValues()->attach($valuesToAttach);
+        return $tenantData;
+    }
+
+    /**
+     * Populate property_values_* and custom_property_* into the provided data array.
+     */
+    private function hydratePropertyFields(array $data): array
+    {
+        if (! ($this->record && $this->record->product_type_id)) {
+            return $data;
+        }
+
+        $properties = Property::where('is_active', true)
+            ->where(function ($query) {
+                $query->where('is_global', true)
+                    ->orWhereHas('productTypes', function ($q) {
+                        $q->where('pim_product_types.id', $this->record->product_type_id);
+                    });
+            })
+            ->get();
+
+        // Prefetch all selected list property values for this product in one query
+        $selectedValuesByProperty = $this->record->propertyValues()
+            ->select('pim_property_value.id', 'pim_property_value.property_id')
+            ->get()
+            ->groupBy('property_id')
+            ->map(fn ($rows) => $rows->pluck('id')->toArray())
+            ->toArray();
+
+        // Prefetch all custom property values in one query
+        $customValuesByProperty = $this->record->customPropertyValues()
+            ->get()
+            ->keyBy('property_id');
+
+        foreach ($properties as $property) {
+            if ($property->isListType() || $property->isColorType()) {
+                $fieldName = "property_values_{$property->id}";
+                $selectedValues = $selectedValuesByProperty[$property->id] ?? [];
+                $data[$fieldName] = ($property->max_values === 1)
+                    ? ($selectedValues[0] ?? null)
+                    : $selectedValues;
+            } else {
+                $fieldName = "custom_property_{$property->id}";
+                $customValue = $customValuesByProperty->get($property->id);
+                if ($customValue) {
+                    $data[$fieldName] = $customValue->value;
+                } else {
+                    if ($property->supportsMultilang()) {
+                        $locales = $this->getAvailableLocales();
+                        $data[$fieldName] = array_fill_keys($locales, '');
+                    } else {
+                        $data[$fieldName] = null;
                     }
                 }
             }
+        }
 
-            $customPropertyData = [];
-            foreach ($state as $key => $value) {
-                if (is_string($key) && str_starts_with($key, 'custom_property_')) {
-                    $propertyId = str_replace('custom_property_', '', $key);
-                    $customPropertyData[$propertyId] = $value;
-                }
+        return $data;
+    }
+
+    /**
+     * Sync many-to-many list property values based on form state.
+     */
+    private function syncListPropertyValues(array $state): void
+    {
+        $propertyData = [];
+        foreach ($state as $key => $value) {
+            if (is_string($key) && str_starts_with($key, 'property_values_')) {
+                $propertyId = str_replace('property_values_', '', $key);
+                $propertyData[$propertyId] = $value;
             }
+        }
 
-            foreach ($customPropertyData as $propertyId => $value) {
-                $property = Property::find($propertyId);
-                if ($property && $property->isCustomType()) {
-                    if ($property->supportsMultilang() && is_array($value)) {
-                        $filteredValue = array_filter($value, fn ($v) => $v !== null && $v !== '');
-                        if (! empty($filteredValue)) {
-                            $this->record->setCustomPropertyValue($property, $value);
-                        } else {
-                            $this->record->customPropertyValues()
-                                ->where('property_id', $propertyId)
-                                ->delete();
-                        }
-                    } elseif ($value !== null && $value !== '') {
+        // Detach all existing property values in a single operation to avoid repeated queries
+        $allCurrentIds = \Eclipse\Catalogue\Models\PropertyValue::query()->pluck('id')->all();
+        if (! empty($allCurrentIds)) {
+            $this->record->propertyValues()->detach($allCurrentIds);
+        }
+
+        // Attach back the new selections per property
+        foreach ($propertyData as $propertyId => $values) {
+            if (empty($values)) {
+                continue;
+            }
+            $valuesToAttach = is_array($values) ? $values : [$values];
+            $valuesToAttach = array_filter($valuesToAttach);
+            if (! empty($valuesToAttach)) {
+                $this->record->propertyValues()->attach($valuesToAttach);
+            }
+        }
+    }
+
+    /**
+     * Upsert custom property single-value fields based on form state.
+     */
+    private function syncCustomPropertyValues(array $state): void
+    {
+        $customPropertyData = [];
+        foreach ($state as $key => $value) {
+            if (is_string($key) && str_starts_with($key, 'custom_property_')) {
+                $propertyId = str_replace('custom_property_', '', $key);
+                $customPropertyData[$propertyId] = $value;
+            }
+        }
+
+        foreach ($customPropertyData as $propertyId => $value) {
+            $property = Property::find($propertyId);
+            if ($property && $property->isCustomType()) {
+                if ($property->supportsMultilang() && is_array($value)) {
+                    $filteredValue = array_filter($value, fn ($v) => $v !== null && $v !== '');
+                    if (! empty($filteredValue)) {
                         $this->record->setCustomPropertyValue($property, $value);
                     } else {
                         $this->record->customPropertyValues()
                             ->where('property_id', $propertyId)
                             ->delete();
                     }
+                } elseif ($value !== null && $value !== '') {
+                    $this->record->setCustomPropertyValue($property, $value);
+                } else {
+                    $this->record->customPropertyValues()
+                        ->where('property_id', $propertyId)
+                        ->delete();
                 }
             }
         }

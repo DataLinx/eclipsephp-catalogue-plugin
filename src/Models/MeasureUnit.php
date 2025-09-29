@@ -2,13 +2,14 @@
 
 namespace Eclipse\Catalogue\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 
 class MeasureUnit extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'pim_measure_units';
 
@@ -61,5 +62,10 @@ class MeasureUnit extends Model
     public function isDefault(): bool
     {
         return $this->is_default;
+    }
+
+    protected static function newFactory()
+    {
+        return \Eclipse\Catalogue\Factories\MeasureUnitFactory::new();
     }
 }

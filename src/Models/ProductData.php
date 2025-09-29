@@ -22,6 +22,9 @@ class ProductData extends Model
         'is_active',
         'available_from_date',
         'has_free_delivery',
+        'stock',
+        'min_stock',
+        'date_stocked',
     ];
 
     /**
@@ -66,6 +69,9 @@ class ProductData extends Model
             'is_active' => 'boolean',
             'available_from_date' => 'datetime',
             'has_free_delivery' => 'boolean',
+            'stock' => 'decimal:5',
+            'min_stock' => 'decimal:5',
+            'date_stocked' => 'date',
         ];
     }
 

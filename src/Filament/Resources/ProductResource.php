@@ -102,6 +102,13 @@ class ProductResource extends Resource implements HasShieldPermissions
                                         TextInput::make('gross_weight')
                                             ->numeric()
                                             ->suffix('kg'),
+
+                                        Select::make('measure_unit_id')
+                                            ->label(__('eclipse-catalogue::product.fields.measure_unit'))
+                                            ->relationship('measureUnit', 'name')
+                                            ->searchable()
+                                            ->preload()
+                                            ->placeholder(__('eclipse-catalogue::product.placeholders.measure_unit')),
                                     ])
                                     ->columns(2),
 
@@ -236,6 +243,22 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                                             \Filament\Forms\Components\DateTimePicker::make("tenant_data.{$tenantId}.available_from_date")
                                                 ->label(__('eclipse-catalogue::product.fields.available_from_date')),
+
+                                            TextInput::make("tenant_data.{$tenantId}.stock")
+                                                ->label(__('eclipse-catalogue::product.fields.stock'))
+                                                ->numeric()
+                                                ->step(0.00001)
+                                                ->placeholder(__('eclipse-catalogue::product.placeholders.stock')),
+
+                                            TextInput::make("tenant_data.{$tenantId}.min_stock")
+                                                ->label(__('eclipse-catalogue::product.fields.min_stock'))
+                                                ->numeric()
+                                                ->step(0.00001)
+                                                ->placeholder(__('eclipse-catalogue::product.placeholders.min_stock')),
+
+                                            \Filament\Forms\Components\DatePicker::make("tenant_data.{$tenantId}.date_stocked")
+                                                ->label(__('eclipse-catalogue::product.fields.date_stocked'))
+                                                ->placeholder(__('eclipse-catalogue::product.placeholders.date_stocked')),
                                         ];
                                     },
                                     sectionTitle: __('eclipse-catalogue::product.sections.tenant_settings'),
@@ -676,6 +699,46 @@ class ProductResource extends Resource implements HasShieldPermissions
                         return is_array($category->name) ? ($category->name[app()->getLocale()] ?? reset($category->name)) : $category->name;
                     }),
 
+                TextColumn::make('stock')
+                    ->label(__('eclipse-catalogue::product.table.columns.stock'))
+                    ->numeric(5)
+                    ->getStateUsing(function (Product $record) {
+                        return $record->currentTenantData()?->stock;
+                    })
+                    ->suffix(function (Product $record) {
+                        return $record->measureUnit?->name ? ' '.$record->measureUnit->name : '';
+                    })
+                    ->width('120px')
+                    ->toggleable(false),
+
+                TextColumn::make('measureUnit.name')
+                    ->label(__('eclipse-catalogue::product.table.columns.measure_unit'))
+                    ->width('100px')
+                    ->toggleable(false),
+
+                TextColumn::make('min_stock')
+                    ->label(__('eclipse-catalogue::product.table.columns.min_stock'))
+                    ->numeric(5)
+                    ->getStateUsing(function (Product $record) {
+                        return $record->currentTenantData()?->min_stock;
+                    })
+                    ->suffix(function (Product $record) {
+                        return $record->measureUnit?->name ? ' '.$record->measureUnit->name : '';
+                    })
+                    ->width('120px')
+                    ->toggleable()
+                    ->toggledHiddenByDefault(),
+
+                TextColumn::make('date_stocked')
+                    ->label(__('eclipse-catalogue::product.table.columns.date_stocked'))
+                    ->getStateUsing(function (Product $record) {
+                        return $record->currentTenantData()?->date_stocked;
+                    })
+                    ->date()
+                    ->width('120px')
+                    ->toggleable()
+                    ->toggledHiddenByDefault(),
+
                 TextColumn::make('type.name')
                     ->label(__('eclipse-catalogue::product.table.columns.type')),
 
@@ -823,6 +886,12 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                         return $query->pluck('name', 'id')->toArray();
                     }),
+                SelectFilter::make('measure_unit_id')
+                    ->label(__('eclipse-catalogue::product.filters.measure_unit'))
+                    ->multiple()
+                    ->relationship('measureUnit', 'name')
+                    ->searchable()
+                    ->preload(),
                 SelectFilter::make('origin_country_id')
                     ->label(__('eclipse-catalogue::product.fields.origin_country_id'))
                     ->multiple()
