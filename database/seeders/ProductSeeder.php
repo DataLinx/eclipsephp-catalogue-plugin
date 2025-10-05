@@ -6,6 +6,7 @@ use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Group;
 use Eclipse\Catalogue\Models\Product;
 use Eclipse\Catalogue\Models\ProductData;
+use Eclipse\Catalogue\Models\ProductStatus;
 use Eclipse\Catalogue\Models\ProductType;
 use Exception;
 use Illuminate\Database\Seeder;
@@ -19,6 +20,7 @@ class ProductSeeder extends Seeder
         $this->ensureSampleImagesExist();
         $this->ensureProductTypesExist();
         $this->ensureGroupsExist();
+        $this->ensureProductStatusesExist();
 
         $productTypes = ProductType::all();
 
@@ -97,6 +99,18 @@ class ProductSeeder extends Seeder
 
         if (! empty($productDataInserts)) {
             ProductData::insert($productDataInserts);
+
+            $createdProductData = ProductData::whereIn('product_id', $products->pluck('id'))->get();
+
+            if ($tenantFK && $tenantModel && class_exists($tenantModel)) {
+                foreach ($createdProductData as $productData) {
+                    $this->assignRandomProductStatus($productData, $productData->{$tenantFK});
+                }
+            } else {
+                foreach ($createdProductData as $productData) {
+                    $this->assignRandomProductStatus($productData, null);
+                }
+            }
         }
 
         if (! empty($groupProductInserts)) {
@@ -232,6 +246,35 @@ class ProductSeeder extends Seeder
 
         if ($groups->isEmpty()) {
             $this->call(GroupSeeder::class);
+        }
+    }
+
+    private function ensureProductStatusesExist(): void
+    {
+        $productStatuses = ProductStatus::all();
+
+        if ($productStatuses->isEmpty()) {
+            $this->call(ProductStatusSeeder::class);
+        }
+    }
+
+    private function assignRandomProductStatus(ProductData $productData, ?int $tenantId): void
+    {
+        $tenantFK = config('eclipse-catalogue.tenancy.foreign_key');
+
+        $query = ProductStatus::query();
+
+        if ($tenantFK && $tenantId !== null) {
+            $query->where($tenantFK, $tenantId);
+        } elseif (! $tenantFK) {
+            $query->whereNull('site_id');
+        }
+
+        $availableStatuses = $query->get();
+
+        if ($availableStatuses->isNotEmpty() && rand(1, 100) <= 70) {
+            $randomStatus = $availableStatuses->random();
+            $productData->update(['product_status_id' => $randomStatus->id]);
         }
     }
 

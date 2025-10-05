@@ -1,0 +1,77 @@
+<?php
+
+beforeEach(function () {
+    $this->migrate();
+});
+
+it('builds color group schema correctly', function () {
+    // Test that color form fields are properly structured
+    $resource = new \Eclipse\Catalogue\Filament\Resources\PropertyValueResource;
+    $reflection = new ReflectionClass($resource);
+    $method = $reflection->getMethod('buildColorGroupSchema');
+    $method->setAccessible(true);
+
+    $colorGroupSchema = $method->invoke($resource);
+
+    // Should return one main group component
+    expect($colorGroupSchema)->toHaveCount(1);
+    expect($colorGroupSchema[0])->toBeInstanceOf(\Filament\Forms\Components\Group::class);
+
+    // Group should contain 4 form components
+    $groupSchema = $colorGroupSchema[0]->getChildComponents();
+    expect($groupSchema)->toHaveCount(4);
+
+    // Verify component types: Radio (background type), ColorPicker, Grid (gradient), ViewField (preview)
+    expect($groupSchema[0])->toBeInstanceOf(\Filament\Forms\Components\Radio::class);
+    expect($groupSchema[1])->toBeInstanceOf(\Filament\Forms\Components\ColorPicker::class);
+    expect($groupSchema[2])->toBeInstanceOf(\Filament\Forms\Components\Grid::class);
+    expect($groupSchema[3])->toBeInstanceOf(\Filament\Forms\Components\ViewField::class);
+});
+
+it('configures color picker component', function () {
+    // Test that the color picker is properly configured for solid colors
+    $resource = new \Eclipse\Catalogue\Filament\Resources\PropertyValueResource;
+    $reflection = new ReflectionClass($resource);
+    $method = $reflection->getMethod('buildColorGroupSchema');
+    $method->setAccessible(true);
+
+    $colorGroupSchema = $method->invoke($resource);
+    $groupSchema = $colorGroupSchema[0]->getChildComponents();
+    $colorPicker = $groupSchema[1];
+
+    expect($colorPicker)->toBeInstanceOf(\Filament\Forms\Components\ColorPicker::class);
+    expect($colorPicker->getName())->toBe('color');
+});
+
+it('configures gradient grid component', function () {
+    // Test that gradient controls are properly structured
+    $resource = new \Eclipse\Catalogue\Filament\Resources\PropertyValueResource;
+    $reflection = new ReflectionClass($resource);
+    $method = $reflection->getMethod('buildColorGroupSchema');
+    $method->setAccessible(true);
+
+    $colorGroupSchema = $method->invoke($resource);
+    $groupSchema = $colorGroupSchema[0]->getChildComponents();
+    $gradientGrid = $groupSchema[2];
+
+    expect($gradientGrid)->toBeInstanceOf(\Filament\Forms\Components\Grid::class);
+
+    // Should contain color_start, color_end, gradient_direction, gradient_style
+    $gridChildren = $gradientGrid->getChildComponents();
+    expect($gridChildren)->toHaveCount(4);
+});
+
+it('configures color preview component', function () {
+    // Test that the color preview field is properly set up
+    $resource = new \Eclipse\Catalogue\Filament\Resources\PropertyValueResource;
+    $reflection = new ReflectionClass($resource);
+    $method = $reflection->getMethod('buildColorGroupSchema');
+    $method->setAccessible(true);
+
+    $colorGroupSchema = $method->invoke($resource);
+    $groupSchema = $colorGroupSchema[0]->getChildComponents();
+    $previewField = $groupSchema[3];
+
+    expect($previewField)->toBeInstanceOf(\Filament\Forms\Components\ViewField::class);
+    expect($previewField->getName())->toBe('preview');
+});

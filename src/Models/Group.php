@@ -3,6 +3,8 @@
 namespace Eclipse\Catalogue\Models;
 
 use Eclipse\Catalogue\Factories\GroupFactory;
+use Eclipse\Common\Foundation\Models\Scopes\ActiveScope;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\DB;
 
+#[ScopedBy(ActiveScope::class)]
 class Group extends Model
 {
     use HasFactory;
@@ -27,14 +30,6 @@ class Group extends Model
         'is_active' => 'boolean',
         'is_browsable' => 'boolean',
     ];
-
-    /**
-     * Scope: only active groups.
-     */
-    public function scopeActive(Builder $query): Builder
-    {
-        return $query->where('is_active', true);
-    }
 
     /**
      * Scope: restrict by current tenant if tenancy is enabled and a tenant is selected.

@@ -5,6 +5,7 @@ namespace Eclipse\Catalogue\Filament\Resources;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Eclipse\Catalogue\Filament\Resources\GroupResource\Pages;
 use Eclipse\Catalogue\Models\Group;
+use Eclipse\Common\Foundation\Models\Scopes\ActiveScope;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -154,7 +155,8 @@ class GroupResource extends Resource implements HasShieldPermissions
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            ->withoutGlobalScope(ActiveScope::class);
 
         $currentTenant = \Filament\Facades\Filament::getTenant();
         if ($currentTenant) {

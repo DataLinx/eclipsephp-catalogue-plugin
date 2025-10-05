@@ -8,6 +8,8 @@ use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 
 /**
  * Generic per-tenant fields builder for Filament forms.
@@ -92,13 +94,13 @@ class GenericTenantFieldsComponent
                 ->live();
 
             // If flag is part of any exclusive set, wire afterStateUpdated to disable others in the set
-            foreach ($exclusiveSets as $set) {
-                if (in_array($flag, $set, true)) {
-                    $toggle = $toggle->afterStateUpdated(function ($state, callable $setField) use ($set, $flag, $tenantId) {
+            foreach ($exclusiveSets as $exclusiveSet) {
+                if (in_array($flag, $exclusiveSet, true)) {
+                    $toggle = $toggle->afterStateUpdated(function (bool $state, Set $set) use ($exclusiveSet, $flag, $tenantId) {
                         if ($state) {
-                            foreach ($set as $otherFlag) {
+                            foreach ($exclusiveSet as $otherFlag) {
                                 if ($otherFlag !== $flag) {
-                                    $setField("tenant_data.{$tenantId}.{$otherFlag}", false);
+                                    $set("tenant_data.{$tenantId}.{$otherFlag}", false);
                                 }
                             }
                         }
@@ -107,7 +109,7 @@ class GenericTenantFieldsComponent
             }
 
             // Persist current tenant's data into all_tenant_data whenever a flag changes
-            $toggle = $toggle->afterStateUpdated(function ($state, callable $set, callable $get) use ($tenantId) {
+            $toggle = $toggle->afterStateUpdated(function ($state, Set $set, Get $get) use ($tenantId) {
                 $currentData = $get("tenant_data.{$tenantId}") ?? [];
                 $allTenantData = $get('all_tenant_data') ?? [];
                 $allTenantData[$tenantId] = $currentData;
@@ -121,9 +123,26 @@ class GenericTenantFieldsComponent
         if ($extraFieldsBuilder) {
             $extra = $extraFieldsBuilder($tenantId, $tenantName);
             if (is_array($extra)) {
+                // For extra fields, also persist on change if supported
+                $enhancedExtra = [];
+                foreach ($extra as $component) {
+                    // Ensure extra components push state immediately while editing
+                    if (method_exists($component, 'live')) {
+                        $component = $component->live();
+                    }
+                    if (method_exists($component, 'afterStateUpdated')) {
+                        $component = $component->afterStateUpdated(function ($state, Set $set, Get $get) use ($tenantId) {
+                            $currentData = $get("tenant_data.{$tenantId}") ?? [];
+                            $allTenantData = $get('all_tenant_data') ?? [];
+                            $allTenantData[$tenantId] = $currentData;
+                            $set('all_tenant_data', $allTenantData);
+                        });
+                    }
+                    $enhancedExtra[] = $component;
+                }
                 $schema = [
                     ...$schema,
-                    ...$extra,
+                    ...$enhancedExtra,
                 ];
             }
         }
