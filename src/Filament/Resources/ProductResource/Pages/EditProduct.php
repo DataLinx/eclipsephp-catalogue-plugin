@@ -2,8 +2,10 @@
 
 namespace Eclipse\Catalogue\Filament\Resources\ProductResource\Pages;
 
+use Eclipse\Catalogue\Enums\ProductRelationType;
 use Eclipse\Catalogue\Filament\Resources\ProductResource;
 use Eclipse\Catalogue\Models\Group;
+use Eclipse\Catalogue\Models\ProductRelation;
 use Eclipse\Catalogue\Models\Property;
 use Eclipse\Catalogue\Models\PropertyValue;
 use Eclipse\Catalogue\Traits\HandlesTenantData;
@@ -17,6 +19,7 @@ use Filament\Facades\Filament;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use LaraZeus\SpatieTranslatable\Actions\LocaleSwitcher;
 use LaraZeus\SpatieTranslatable\Resources\Pages\EditRecord\Concerns\Translatable;
 use Nben\FilamentRecordNav\Actions\NextRecordAction;
@@ -146,6 +149,13 @@ class EditProduct extends EditRecord
     {
         if ($this->record) {
             $state = $this->form->getRawState();
+
+            $this->saveProductRelations([
+                'related_products' => $this->data['related_products'] ?? [],
+                'cross_sell_products' => $this->data['cross_sell_products'] ?? [],
+                'upsell_products' => $this->data['upsell_products'] ?? [],
+            ]);
+
             $propertyData = [];
             foreach ($state as $key => $value) {
                 if (is_string($key) && str_starts_with($key, 'property_values_')) {
@@ -217,7 +227,7 @@ class EditProduct extends EditRecord
         return [];
     }
 
-    public function form(Schema $schema): Schema
+    public function schema(Schema $schema): Schema
     {
         return $schema;
     }
@@ -334,5 +344,60 @@ class EditProduct extends EditRecord
             ])
             ->values()
             ->toArray();
+    }
+
+    protected function saveProductRelations(array $state): void
+    {
+        if (! $this->record) {
+            return;
+        }
+
+        $relationTypes = [
+            'related_products' => ProductRelationType::RELATED,
+            'cross_sell_products' => ProductRelationType::CROSS_SELL,
+            'upsell_products' => ProductRelationType::UPSELL,
+        ];
+
+        foreach ($relationTypes as $fieldName => $relationType) {
+            $relationItems = $state[$fieldName] ?? [];
+
+            if (empty($relationItems)) {
+                continue;
+            }
+
+            ProductRelation::where('parent_id', $this->record->id)
+                ->where('type', $relationType->value)
+                ->delete();
+
+            $position = 1;
+            foreach ($relationItems as $item) {
+                if (! is_array($item) || ! isset($item['product_id']) || empty($item['product_id'])) {
+                    continue;
+                }
+
+                $childId = is_numeric($item['product_id']) ? (int) $item['product_id'] : null;
+
+                if ($childId && $childId !== $this->record->id) {
+                    try {
+                        ProductRelation::create([
+                            'parent_id' => $this->record->id,
+                            'child_id' => $childId,
+                            'type' => $relationType->value,
+                            'sort' => $position,
+                        ]);
+                        $position++;
+                    } catch (\Exception $e) {
+                        Log::error('Failed to create product relation', [
+                            'parent_id' => $this->record->id,
+                            'child_id' => $childId,
+                            'type' => $relationType->value,
+                            'sort' => $position,
+                            'item' => $item,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+        }
     }
 }

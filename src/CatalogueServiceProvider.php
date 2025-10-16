@@ -12,7 +12,6 @@ use Eclipse\Catalogue\Filament\Resources\ProductTypeResource;
 use Eclipse\Catalogue\Filament\Resources\PropertyResource;
 use Eclipse\Catalogue\Filament\Resources\PropertyValueResource;
 use Eclipse\Catalogue\Filament\Resources\TaxClassResource;
-use Eclipse\Catalogue\Livewire\TenantSwitcher;
 use Eclipse\Catalogue\Models\Category;
 use Eclipse\Catalogue\Models\Product;
 use Filament\Support\Assets\Css;
@@ -176,8 +175,10 @@ class CatalogueServiceProvider extends PackageServiceProvider
         });
 
         // Register Livewire components
-        if (class_exists(Livewire::class)) {
-            Livewire::component('eclipse-catalogue::tenant-switcher', TenantSwitcher::class);
+        if (class_exists(\Livewire\Livewire::class)) {
+            \Livewire\Livewire::component('eclipse-catalogue::tenant-switcher', \Eclipse\Catalogue\Livewire\TenantSwitcher::class);
+            \Livewire\Livewire::component('eclipse.catalogue.livewire.product-selector-table', \Eclipse\Catalogue\Livewire\ProductSelectorTable::class);
+            \Livewire\Livewire::component('eclipse.catalogue.livewire.product-relations-table', \Eclipse\Catalogue\Livewire\ProductRelationsTable::class);
         }
 
         FilamentAsset::register([

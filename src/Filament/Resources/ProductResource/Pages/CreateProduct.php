@@ -52,7 +52,7 @@ class CreateProduct extends CreateRecord
         return [];
     }
 
-    public function form(Schema $schema): Schema
+    public function schema(Schema $schema): Schema
     {
         return $schema;
     }
