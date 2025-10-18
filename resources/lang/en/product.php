@@ -6,6 +6,10 @@ return [
 
     'fields' => [
         'product_type' => 'Product Type',
+        'measure_unit' => 'Measure Unit',
+        'stock' => 'Stock',
+        'min_stock' => 'Min Stock',
+        'date_stocked' => 'Date Stocked',
         'origin_country_id' => 'Country of Origin',
         'tariff_code_id' => 'Tariff code (CN)',
         'meta_title' => 'Meta Title',
@@ -19,6 +23,10 @@ return [
 
     'placeholders' => [
         'product_type' => 'Select product type (optional)',
+        'measure_unit' => 'Select measure unit (optional)',
+        'stock' => 'Enter stock quantity',
+        'min_stock' => 'Enter minimum stock threshold',
+        'date_stocked' => 'Select date when stock was added',
         'origin_country_id' => 'Select country of origin',
         'tariff_code_id' => 'Select tariff code (CN)',
         'meta_title' => 'SEO meta title',
@@ -29,12 +37,17 @@ return [
     'table' => [
         'columns' => [
             'type' => 'Type',
+            'stock' => 'Stock',
+            'measure_unit' => 'Unit',
+            'min_stock' => 'Min Stock',
+            'date_stocked' => 'Date Stocked',
             'is_active' => 'Active',
         ],
     ],
 
     'filters' => [
         'product_type' => 'Product Types',
+        'measure_unit' => 'Measure Units',
     ],
 
     'sections' => [
