@@ -26,6 +26,8 @@ class PropertyValue extends Model implements HasMedia
         'sort',
         'info_url',
         'image',
+        'is_group',
+        'group_value_id',
         'color',
     ];
 
@@ -38,6 +40,8 @@ class PropertyValue extends Model implements HasMedia
     protected $casts = [
         'sort' => 'integer',
         'property_id' => 'integer',
+        'is_group' => 'boolean',
+        'group_value_id' => 'integer',
         'color' => BackgroundCast::class,
     ];
 
@@ -50,6 +54,16 @@ class PropertyValue extends Model implements HasMedia
     {
         return $this->belongsToMany(Product::class, 'pim_product_has_property_value', 'property_value_id', 'product_id')
             ->withTimestamps();
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'group_value_id');
+    }
+
+    public function members()
+    {
+        return $this->hasMany(self::class, 'group_value_id');
     }
 
     public function registerMediaCollections(): void
@@ -69,6 +83,23 @@ class PropertyValue extends Model implements HasMedia
         static::addGlobalScope('orderBySort', function ($query) {
             $query->orderBy('sort');
         });
+    }
+
+    public function scopeSameProperty($query, int $propertyId)
+    {
+        return $query->where('property_id', $propertyId);
+    }
+
+    /**
+     * Order values so that each group parent is followed by its members.
+     */
+    public function scopeGroupedOrder($query)
+    {
+        return $query
+            ->orderByRaw('COALESCE(group_value_id, id)')
+            ->orderByRaw('CASE WHEN is_group THEN 0 ELSE 1 END')
+            ->orderBy('sort')
+            ->orderBy('value');
     }
 
     /**
@@ -142,6 +173,24 @@ class PropertyValue extends Model implements HasMedia
                 throw new RuntimeException('Values must belong to the same property.');
             }
 
+            if ($this->is_group && $target->group_value_id !== null) {
+                throw new \RuntimeException('Cannot merge a group into a value that is already a member of another group.');
+            }
+
+            if ($this->is_group && ! $target->is_group) {
+                $target->is_group = true;
+                $target->save();
+            }
+
+            if ($this->is_group && $target->group_value_id !== null) {
+                throw new \RuntimeException('Cannot merge a group into a value that is already a member of another group.');
+            }
+
+            if ($this->is_group && ! $target->is_group) {
+                $target->is_group = true;
+                $target->save();
+            }
+
             $pivotTable = 'pim_product_has_property_value';
 
             $productIds = DB::table($pivotTable)
@@ -171,5 +220,40 @@ class PropertyValue extends Model implements HasMedia
                 'deleted' => 1,
             ];
         });
+    }
+
+    public function canBeGroupedInto(self $target): void
+    {
+        if ($this->id === $target->id) {
+            throw new \RuntimeException('Cannot group a value into itself.');
+        }
+        if ($this->property_id !== $target->property_id) {
+            throw new \RuntimeException('Values must belong to the same property.');
+        }
+        if ($target->group_value_id !== null) {
+            throw new \RuntimeException('Cannot group into a value that is already a member of another group.');
+        }
+    }
+
+    public function groupInto(int $targetId): void
+    {
+        DB::transaction(function () use ($targetId) {
+            $target = self::query()->lockForUpdate()->findOrFail($targetId);
+            $this->canBeGroupedInto($target);
+
+            if (! $target->is_group) {
+                $target->is_group = true;
+                $target->save();
+            }
+
+            $this->group_value_id = $target->id;
+            $this->save();
+        });
+    }
+
+    public function removeFromGroup(): void
+    {
+        $this->group_value_id = null;
+        $this->save();
     }
 }
