@@ -58,6 +58,11 @@ class CreateProduct extends CreateRecord
         return [];
     }
 
+    public function schema(Schema $schema): Schema
+    {
+        return $schema;
+    }
+
     protected function handleRecordCreation(array $data): Model
     {
         $tenantData = $this->extractTenantDataFromFormData($data);

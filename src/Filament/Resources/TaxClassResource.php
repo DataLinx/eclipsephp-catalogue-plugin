@@ -16,6 +16,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -35,10 +36,6 @@ class TaxClassResource extends Resource
     protected static string|\UnitEnum|null $navigationGroup = 'Catalogue';
 
     protected static ?string $recordTitleAttribute = 'name';
-
-    protected static bool $isScopedToTenant = true;
-
-    protected static ?string $tenantOwnershipRelationshipName = 'tenant';
 
     public static function getModelLabel(): string
     {
@@ -71,13 +68,8 @@ class TaxClassResource extends Resource
                             }
 
                             return $rule;
-                        }
+                        },
                     ),
-
-                Textarea::make('description')
-                    ->label(__('eclipse-catalogue::tax-class.fields.description'))
-                    ->rows(3)
-                    ->maxLength(65535),
 
                 TextInput::make('rate')
                     ->label(__('eclipse-catalogue::tax-class.fields.rate'))
@@ -88,17 +80,26 @@ class TaxClassResource extends Resource
                     ->step(0.01)
                     ->suffix('%'),
 
-                Toggle::make('is_default')
-                    ->label(__('eclipse-catalogue::tax-class.fields.is_default'))
-                    ->helperText(__('eclipse-catalogue::tax-class.messages.default_class_help')),
+                Textarea::make('description')
+                    ->label(__('eclipse-catalogue::tax-class.fields.description'))
+                    ->rows(3)
+                    ->maxLength(65535)
+                    ->columnSpanFull(),
 
-                Placeholder::make('created_at')
-                    ->label('Created Date')
-                    ->content(fn (?TaxClass $record): string => $record?->created_at?->diffForHumans() ?? '-'),
+                Grid::make(3)
+                    ->schema([
+                        Toggle::make('is_default')
+                            ->label(__('eclipse-catalogue::tax-class.fields.is_default'))
+                            ->helperText(__('eclipse-catalogue::tax-class.messages.default_class_help')),
 
-                Placeholder::make('updated_at')
-                    ->label('Last Modified Date')
-                    ->content(fn (?TaxClass $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                        Placeholder::make('created_at')
+                            ->label('Created Date')
+                            ->content(fn (?TaxClass $record): string => $record?->created_at?->diffForHumans() ?? '-'),
+
+                        Placeholder::make('updated_at')
+                            ->label('Last Modified Date')
+                            ->content(fn (?TaxClass $record): string => $record?->updated_at?->diffForHumans() ?? '-'),
+                    ]),
             ]);
     }
 
