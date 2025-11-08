@@ -1,5 +1,4 @@
-#file: noinspection ComposeUnknownKeys
-name: eclipsephp-catalogue-plugin-8.3
+name: eclipse-catalogue-8.3
 services:
   appserver:
     type: php:custom

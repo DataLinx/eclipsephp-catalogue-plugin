@@ -21,6 +21,10 @@ abstract class TestCase extends BaseTestCase
     protected function getEnvironmentSetUp($app): void
     {
         $app['config']->set('filament-shield.register_role_policy', false);
+
+        // Configure tenancy for tests so migrations create the site_id column
+        $app['config']->set('eclipse-catalogue.tenancy.model', 'Workbench\App\Models\Site');
+        $app['config']->set('eclipse-catalogue.tenancy.foreign_key', 'site_id');
     }
 
     protected function setUp(): void
@@ -64,13 +68,21 @@ abstract class TestCase extends BaseTestCase
         $this->superAdmin = User::factory()->create();
 
         // Assign super admin role and give all permissions
-        $superAdminRole = \Spatie\Permission\Models\Role::where('name', 'super_admin')->first();
+        $superAdminRole = \Spatie\Permission\Models\Role::where('name', 'super_admin')
+            ->where('guard_name', 'web')
+            ->first();
         if ($superAdminRole) {
             $this->superAdmin->assignRole($superAdminRole);
             // Give all permissions to super admin role
             $permissions = \Spatie\Permission\Models\Permission::all();
             $superAdminRole->syncPermissions($permissions);
         }
+
+        // Clear permission cache to ensure roles are recognized
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        // Refresh user to reload roles
+        $this->superAdmin->refresh();
 
         $this->actingAs($this->superAdmin);
 

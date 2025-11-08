@@ -8,21 +8,14 @@ use Illuminate\Support\Str;
 use Workbench\App\Models\User;
 
 /**
- * @template TModel of \Workbench\App\Models\User
- *
- * @extends Factory<TModel>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Workbench\App\Models\User>
  */
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
-
-    /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<TModel>
+     * @var class-string<\Illuminate\Database\Eloquent\Model>
      */
     protected $model = User::class;
 
@@ -37,7 +30,7 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
     }

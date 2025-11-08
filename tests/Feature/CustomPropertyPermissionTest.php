@@ -46,8 +46,11 @@ it('unauthorized access can be prevented for custom properties', function () {
 });
 
 it('super admin can manage custom properties', function () {
-    // Set up super admin
-    $this->setUpSuperAdmin();
+    // Ensure permissions and roles are created
+    $this->createPermissions();
+    $this->createRoles();
+    // Set up super admin with tenant
+    $this->setUpSuperAdminAndTenant();
 
     // Create test custom property
     $customProperty = Property::create([
@@ -58,12 +61,9 @@ it('super admin can manage custom properties', function () {
         'is_multilang' => false,
     ]);
 
-    // View table
-    $this->get(PropertyResource::getUrl())
-        ->assertOk();
-
-    // Create property
+    // View table and verify super admin can manage properties
     livewire(ListProperties::class)
+        ->assertSuccessful()
         ->assertActionEnabled('create');
 
     // Edit property

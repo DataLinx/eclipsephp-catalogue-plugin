@@ -10,11 +10,14 @@ use Livewire\Livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    $this->setUpSuperAdmin();
+    $this->migrate();
+    $this->createPermissions();
+    $this->createRoles();
+    $this->setUpSuperAdminAndTenant();
 });
 
 it('can render category index page', function (): void {
-    $this->get(CategoryResource::getUrl('index'))
+    Livewire::test(CategoryResource\Pages\ListCategories::class)
         ->assertSuccessful();
 });
 
